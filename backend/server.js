@@ -247,6 +247,39 @@ client.on('messageCreate', async (message) => {
     message.reply({ embeds: [embed] });
   }
 
+  if (command === '!room') {
+    const roomQuery = args.slice(1).join(' ').toLowerCase();
+    const matchedRoom = ROOMS.find(r => r.toLowerCase().includes(roomQuery) || r.replace(/ /g, '').toLowerCase().includes(roomQuery));
+    
+    if (matchedRoom) {
+      const roomDevices = globalState.filter(d => d.room === matchedRoom);
+      const fans = roomDevices.filter(d => d.type === 'Fan');
+      const lights = roomDevices.filter(d => d.type === 'Light');
+      const onFans = fans.filter(d => d.isOn).length;
+      const onLights = lights.filter(d => d.isOn).length;
+      const roomPower = roomDevices.reduce((sum, d) => d.isOn ? sum + d.powerDrawWhenOn : sum, 0);
+      
+      let responseText = `**${matchedRoom}**\n`;
+      responseText += ` └ 👥 People in Room: ${globalRoomState[matchedRoom].occupants}\n`;
+      responseText += ` └ ⚡ Current Power: ${roomPower}W\n`;
+      responseText += ` └ 🌬️ Fans: ${onFans}/${fans.length} ON\n`;
+      responseText += ` └ 💡 Lights: ${onLights}/${lights.length} ON\n\n`;
+      responseText += `**Devices:**\n`;
+      roomDevices.forEach(d => {
+        responseText += ` └ ${d.name}: ${d.isOn ? '🟢 ON' : '⚫ OFF'}\n`;
+      });
+      
+      const embed = new EmbedBuilder()
+        .setTitle(`🏢 Room Status: ${matchedRoom}`)
+        .setColor('#10b981')
+        .setDescription(responseText);
+      
+      message.reply({ embeds: [embed] });
+    } else {
+      message.reply(`❌ Room not found. Try \`!room drawing\` or \`!room work 1\``);
+    }
+  }
+
   if (command === '!report') {
     const activeRooms = ROOMS.filter(r => globalState.some(d => d.room === r && d.isOn));
     const targetRoom = activeRooms.length > 0 ? activeRooms[0] : 'Work Room 2';

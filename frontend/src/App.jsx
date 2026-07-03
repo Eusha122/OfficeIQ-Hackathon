@@ -33,13 +33,18 @@ function App() {
   const [roomHistory, setRoomHistory] = useState({});
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [generatedReport, setGeneratedReport] = useState(null);
+  const [kpiHistory, setKpiHistory] = useState({
+     power: Array(10).fill({val: 0}),
+     cost: Array(10).fill({val: 0}),
+     eff: Array(10).fill({val: 100}),
+     dev: Array(10).fill({val: 0})
+  });
 
   const tabs = [
     { name: 'Overview', icon: <Home size={18} /> },
     { name: 'Rooms', icon: <LayoutDashboard size={18} /> },
     { name: 'Analytics', icon: <BarChart3 size={18} /> },
-    { name: 'Alerts', icon: <Bell size={18} /> },
-    { name: 'Settings', icon: <Settings size={18} /> }
+    { name: 'Alerts', icon: <Bell size={18} /> }
   ];
 
   useEffect(() => {
@@ -173,11 +178,20 @@ function App() {
 
   const costToday = ((totalPower / 1000) * 10 * 8).toFixed(2);
 
-  const Sparkline = () => (
+  useEffect(() => {
+    setKpiHistory(prev => ({
+       power: [...prev.power, { val: totalPower }].slice(-10),
+       cost: [...prev.cost, { val: parseFloat(costToday) }].slice(-10),
+       eff: [...prev.eff, { val: overallEfficiency }].slice(-10),
+       dev: [...prev.dev, { val: devices.filter(d => d.isOn).length }].slice(-10)
+    }));
+  }, [totalPower, costToday, overallEfficiency, devices]);
+
+  const Sparkline = ({ dataKey }) => (
     <div className="w-16 h-8">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={history.slice(-10)}>
-          <Line type="monotone" dataKey="watts" stroke="#2563EB" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+        <LineChart data={kpiHistory[dataKey] || []}>
+          <Line type="monotone" dataKey="val" stroke="#2563EB" strokeWidth={1.5} dot={false} isAnimationActive={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -219,21 +233,7 @@ function App() {
           })}
         </nav>
 
-        {/* User Profile Footer */}
-        <div className="p-4 border-t border-white/40">
-          <div className="flex items-center justify-between p-2 rounded-[12px] hover:bg-white/50 cursor-pointer transition-colors duration-150">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-slate-200 border border-white flex items-center justify-center text-xs font-semibold text-slate-700 shadow-sm">
-                AD
-              </div>
-              <div className="flex flex-col items-start">
-                <span className="text-sm font-semibold text-slate-800 leading-tight">Admin</span>
-                <span className="text-xs text-slate-500 leading-tight">OfficeIQ</span>
-              </div>
-            </div>
-            <ChevronDown size={14} className="text-slate-400" />
-          </div>
-        </div>
+
       </aside>
 
       {/* Main Content Area */}
@@ -266,7 +266,7 @@ function App() {
                   { title: "Efficiency", value: `${overallEfficiency}%`, sub: "Overall Efficiency", icon: <Target size={16} />, valKey: 'eff' },
                   { title: "Devices Online", value: `${devices.length} / ${devices.length}`, sub: "Connected Devices", icon: <Monitor size={16} />, valKey: 'dev' }
                 ].map((kpi, i) => (
-                  <div key={i} className="bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-5 flex flex-col justify-between hover:-translate-y-0.5 transition-transform duration-200">
+                  <div key={i} className="bg-transparent p-5 flex flex-col justify-between hover:-translate-y-0.5 transition-transform duration-200">
                     <div className="flex justify-between items-start mb-4">
                       <div className="w-8 h-8 rounded-[10px] bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm border border-blue-100/50">
                         {kpi.icon}
@@ -276,7 +276,7 @@ function App() {
                       <div className="text-[36px] font-bold text-slate-900 tracking-tight leading-none mb-1">{kpi.value}</div>
                       <div className="flex justify-between items-end">
                         <span className="text-[13px] font-semibold text-slate-500">{kpi.sub}</span>
-                        <Sparkline />
+                        {kpi.valKey !== 'dev' && <Sparkline dataKey={kpi.valKey} />}
                       </div>
                     </div>
                   </div>
@@ -287,7 +287,7 @@ function App() {
               <div className="flex flex-col xl:flex-row gap-4 lg:h-[400px]">
                 
                 {/* Power Trend Chart */}
-                <div className="xl:w-[70%] bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-4 lg:p-6 flex flex-col h-[300px] lg:h-full">
+                <div className="xl:w-[70%] bg-transparent p-4 lg:p-6 flex flex-col h-[300px] lg:h-full">
                   <div className="flex justify-between items-center mb-6 shrink-0">
                     <h2 className="text-base font-bold text-slate-900">Power Trend (Live)</h2>
                     <div className="bg-white/50 border border-white/60 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-white/80 shadow-sm transition-colors">
@@ -313,7 +313,7 @@ function App() {
                 </div>
 
                 {/* Alerts Panel */}
-                <div className="xl:w-[30%] bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-4 lg:p-6 flex flex-col h-[300px] lg:h-full">
+                <div className="xl:w-[30%] bg-transparent p-4 lg:p-6 flex flex-col h-[300px] lg:h-full">
                   <div className="flex justify-between items-center mb-6 shrink-0">
                     <h2 className="text-base font-bold text-slate-900">Active Alerts</h2>
                     <span onClick={() => setActiveTab('Alerts')} className="text-blue-600 text-xs font-bold cursor-pointer hover:underline">View All</span>
@@ -367,7 +367,7 @@ function App() {
                     const efficiency = calculateEfficiency(roomDevices);
 
                     return (
-                      <div key={roomName} className="bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-6 flex flex-col justify-between h-[180px] hover:-translate-y-0.5 transition-transform duration-200">
+                      <div key={roomName} className="bg-transparent p-6 flex flex-col justify-between h-[180px] hover:-translate-y-0.5 transition-transform duration-200">
                         <div className="flex justify-between items-start">
                           <h3 className="text-[15px] font-bold text-slate-900">{roomName}</h3>
                           <div className="flex gap-2">
@@ -418,7 +418,7 @@ function App() {
           )}
 
           {activeTab === 'Rooms' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 h-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:h-full">
               {roomNames.map(roomName => {
                 const roomDevices = rooms[roomName];
                 const activeCount = roomDevices.filter(d => d.isOn).length;
@@ -617,30 +617,6 @@ function App() {
               </div>
           )}
 
-          {activeTab === 'Settings' && (
-            <div className="max-w-2xl bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-6">
-              <h2 className="text-[15px] font-bold text-slate-900 mb-6">System Configuration</h2>
-              <div className="flex flex-col gap-6">
-                <div className="flex flex-col gap-2">
-                  <label className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">Organization Name</label>
-                  <input type="text" disabled value="OfficeIQ Headquarters" className="bg-white/50 border border-white/80 shadow-sm rounded-[10px] px-4 py-2.5 text-[14px] font-semibold text-slate-800" />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">Gateway IP Address</label>
-                  <input type="text" disabled value="192.168.1.104" className="bg-white/50 border border-white/80 shadow-sm rounded-[10px] px-4 py-2.5 text-[14px] font-semibold text-slate-800 font-mono" />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">Firmware Version</label>
-                  <input type="text" disabled value="v2.4.1 (Stable - Managed by IT)" className="bg-white/50 border border-white/80 shadow-sm rounded-[10px] px-4 py-2.5 text-[14px] font-semibold text-slate-800" />
-                </div>
-                <div className="pt-4 border-t border-white/60">
-                  <button disabled className="bg-slate-100 text-slate-400 border border-slate-200 text-[13px] font-bold px-4 py-2 rounded-[10px] cursor-not-allowed">
-                    Save Changes (Requires Admin)
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
         </div>
 
