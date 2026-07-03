@@ -156,14 +156,35 @@ client.on('messageCreate', async (message) => {
     message.channel.send('🤔 Thinking...');
     
     try {
-      // Call existing DO AI Agent endpoint here (MiniMax M2.5)
-      // const aiResponse = await fetch('YOUR_DO_ENDPOINT', { method: 'POST', body: JSON.stringify({ prompt }) });
-      // const text = await aiResponse.text();
+      if (!process.env.DO_AI_ENDPOINT) {
+         message.reply("Boss is currently unavailable (No AI Endpoint configured).");
+         return;
+      }
+
+      // Call DigitalOcean AI Agent endpoint (OpenAI compatible format)
+      const aiResponse = await fetch(process.env.DO_AI_ENDPOINT, { 
+        method: 'POST', 
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.DO_AI_API_KEY}`
+        },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: prompt }]
+        }) 
+      });
       
-      // MOCK RESPONSE for now:
-      const text = "Drawing Room appears committed to recreating daylight indoors after office hours. Work Room 1 deserves recognition for not personally financing the electricity provider.";
+      if (!aiResponse.ok) {
+        throw new Error(`HTTP error! status: ${aiResponse.status}`);
+      }
+
+      const data = await aiResponse.json();
+      const text = data.choices && data.choices[0] && data.choices[0].message 
+                   ? data.choices[0].message.content 
+                   : "Speechless.";
+      
       message.reply(`👔 **Boss says:**\n"${text}"`);
     } catch (err) {
+      console.error("AI Fetch Error:", err);
       message.reply("Boss is currently unavailable (AI Endpoint Error).");
     }
   }
