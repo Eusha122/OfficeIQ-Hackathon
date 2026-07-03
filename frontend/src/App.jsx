@@ -87,29 +87,30 @@ function App() {
 
   const costToday = ((totalPower / 1000) * 10 * 8).toFixed(2);
 
-  // Tiny sparkline component for KPI cards
   const Sparkline = () => (
     <div className="w-16 h-8">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={history.slice(-10)}>
-          <Line type="monotone" dataKey="watts" stroke="#1D7DFF" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+          <Line type="monotone" dataKey="watts" stroke="#2563EB" strokeWidth={1.5} dot={false} isAnimationActive={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>
   );
 
   return (
-    <div className="min-h-screen w-full flex bg-[#05070A] text-neutral-300 font-sans selection:bg-[#1D7DFF]/30">
+    <div className="h-screen w-full flex bg-[#F4F7F9] text-slate-800 font-sans selection:bg-blue-500/20 relative overflow-hidden">
       
+      {/* Background Refraction Blobs Removed for pure minimalism */}
+
       {/* Left Sidebar */}
-      <aside className="w-[280px] h-screen border-r border-[#ffffff0f] bg-[#05070A] shrink-0 flex flex-col hidden lg:flex sticky top-0">
-        <div className="p-6 flex items-center gap-3 border-b border-[#ffffff0f] h-[72px]">
-          <div className="w-8 h-8 rounded-lg bg-[#1D7DFF] flex items-center justify-center shrink-0">
+      <aside className="w-[280px] h-full bg-white/40 backdrop-blur-2xl border-r border-white/60 shrink-0 flex flex-col hidden lg:flex z-20">
+        <div className="p-6 flex items-center gap-3 border-b border-white/40 h-[72px] shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shrink-0 shadow-sm">
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <span className="text-white font-semibold tracking-tight text-lg">OfficeIQ</span>
+          <span className="text-slate-900 font-bold tracking-tight text-lg">OfficeIQ</span>
         </div>
 
         <nav className="flex-1 p-4 flex flex-col gap-1 overflow-y-auto no-scrollbar">
@@ -119,10 +120,10 @@ function App() {
               <button
                 key={tab.name}
                 onClick={() => setActiveTab(tab.name)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-sm font-medium transition-all duration-150 ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm font-medium transition-all duration-150 ${
                   isActive 
-                    ? 'bg-[#1D7DFF]/10 text-[#1D7DFF]' 
-                    : 'text-neutral-400 hover:text-neutral-200 hover:bg-[#ffffff0a]'
+                    ? 'bg-white/80 text-blue-600 shadow-sm border border-white/60' 
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
                 }`}
               >
                 {tab.icon}
@@ -133,121 +134,77 @@ function App() {
         </nav>
 
         {/* User Profile Footer */}
-        <div className="p-4 border-t border-[#ffffff0f]">
-          <div className="flex items-center justify-between p-2 rounded-[10px] hover:bg-[#ffffff0a] cursor-pointer transition-colors duration-150">
+        <div className="p-4 border-t border-white/40">
+          <div className="flex items-center justify-between p-2 rounded-[12px] hover:bg-white/50 cursor-pointer transition-colors duration-150">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#ffffff15] flex items-center justify-center text-xs font-semibold text-white">
+              <div className="w-8 h-8 rounded-full bg-slate-200 border border-white flex items-center justify-center text-xs font-semibold text-slate-700 shadow-sm">
                 AD
               </div>
               <div className="flex flex-col items-start">
-                <span className="text-sm font-medium text-white leading-tight">Admin</span>
-                <span className="text-xs text-neutral-500 leading-tight">OfficeIQ</span>
+                <span className="text-sm font-semibold text-slate-800 leading-tight">Admin</span>
+                <span className="text-xs text-slate-500 leading-tight">OfficeIQ</span>
               </div>
             </div>
-            <ChevronDown size={14} className="text-neutral-500" />
+            <ChevronDown size={14} className="text-slate-400" />
           </div>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 flex flex-col min-h-screen">
+      <main className="flex-1 min-w-0 flex flex-col h-full relative z-10">
         
         {/* Top Header */}
-        <header className="h-[72px] border-b border-[#ffffff0f] bg-[#05070A] flex items-center justify-between px-8 shrink-0 sticky top-0 z-20">
+        <header className="h-[72px] border-b border-white/60 bg-white/40 backdrop-blur-xl flex items-center justify-between px-4 lg:px-8 shrink-0 z-30">
           <div className="flex flex-col">
-            <h1 className="text-xl font-semibold text-white tracking-tight">{activeTab}</h1>
-            <p className="text-sm text-neutral-500">Real-time energy monitoring across all rooms</p>
-          </div>
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 bg-[#ffffff0a] border border-[#ffffff0f] px-3 py-1.5 rounded-full">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#00C853]"></div>
-              <span className="text-[11px] font-medium text-white tracking-wide">Live Status • Connected</span>
-            </div>
-            <button className="text-neutral-400 hover:text-white transition-colors duration-150 relative">
-              <Bell size={20} />
-              <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#1D7DFF]"></div>
-            </button>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">{activeTab}</h1>
+            <p className="text-sm text-slate-500 font-medium">
+              {activeTab === 'Overview' && 'Real-time energy monitoring across all rooms'}
+              {activeTab === 'Rooms' && 'Manage and monitor individual room environments'}
+              {activeTab === 'Analytics' && 'Detailed power consumption and efficiency metrics'}
+              {activeTab === 'Alerts' && 'System security and anomaly detection logs'}
+              {activeTab === 'Settings' && 'Manage system configuration and preferences'}
+            </p>
           </div>
         </header>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-8">
+        <div className="flex-1 overflow-y-auto p-4 lg:p-8 pb-24 lg:pb-8 flex flex-col gap-6 lg:gap-8">
           
           {activeTab === 'Overview' && (
             <>
               {/* KPI Cards Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                
-                <div className="bg-[#0B1118] border border-[#ffffff0f] rounded-[12px] p-5 flex flex-col justify-between hover:-translate-y-0.5 transition-transform duration-200">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-8 h-8 rounded-[8px] bg-[#1D7DFF]/10 flex items-center justify-center text-[#1D7DFF]">
-                      <Zap size={16} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                {[ 
+                  { title: "Total Usage", value: `${totalPower}W`, sub: "Live Consumption", icon: <Zap size={16} />, valKey: 'power' },
+                  { title: "Cost / Day", value: `৳${costToday}`, sub: "Estimated Cost", icon: <CreditCard size={16} />, valKey: 'cost' },
+                  { title: "Efficiency", value: `${overallEfficiency}%`, sub: "Overall Efficiency", icon: <Target size={16} />, valKey: 'eff' },
+                  { title: "Devices Online", value: `${devices.length} / ${devices.length}`, sub: "Connected Devices", icon: <Monitor size={16} />, valKey: 'dev' }
+                ].map((kpi, i) => (
+                  <div key={i} className="bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-5 flex flex-col justify-between hover:-translate-y-0.5 transition-transform duration-200">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="w-8 h-8 rounded-[10px] bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm border border-blue-100/50">
+                        {kpi.icon}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[36px] font-bold text-slate-900 tracking-tight leading-none mb-1">{kpi.value}</div>
+                      <div className="flex justify-between items-end">
+                        <span className="text-[13px] font-semibold text-slate-500">{kpi.sub}</span>
+                        <Sparkline />
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <div className="text-[36px] font-bold text-white tracking-tight leading-none mb-1">{totalPower}W</div>
-                    <div className="flex justify-between items-end">
-                      <span className="text-[13px] font-medium text-neutral-500">Live Consumption</span>
-                      <Sparkline />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-[#0B1118] border border-[#ffffff0f] rounded-[12px] p-5 flex flex-col justify-between hover:-translate-y-0.5 transition-transform duration-200">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-8 h-8 rounded-[8px] bg-[#1D7DFF]/10 flex items-center justify-center text-[#1D7DFF]">
-                      <CreditCard size={16} />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[36px] font-bold text-white tracking-tight leading-none mb-1">৳{costToday}</div>
-                    <div className="flex justify-between items-end">
-                      <span className="text-[13px] font-medium text-neutral-500">Estimated Cost</span>
-                      <Sparkline />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-[#0B1118] border border-[#ffffff0f] rounded-[12px] p-5 flex flex-col justify-between hover:-translate-y-0.5 transition-transform duration-200">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-8 h-8 rounded-[8px] bg-[#1D7DFF]/10 flex items-center justify-center text-[#1D7DFF]">
-                      <Target size={16} />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[36px] font-bold text-white tracking-tight leading-none mb-1">{overallEfficiency}%</div>
-                    <div className="flex justify-between items-end">
-                      <span className="text-[13px] font-medium text-neutral-500">Overall Efficiency</span>
-                      <Sparkline />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-[#0B1118] border border-[#ffffff0f] rounded-[12px] p-5 flex flex-col justify-between hover:-translate-y-0.5 transition-transform duration-200">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-8 h-8 rounded-[8px] bg-[#1D7DFF]/10 flex items-center justify-center text-[#1D7DFF]">
-                      <Monitor size={16} />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[36px] font-bold text-white tracking-tight leading-none mb-1">{devices.length} <span className="text-xl text-neutral-500 font-medium">/ 18</span></div>
-                    <div className="flex justify-between items-end">
-                      <span className="text-[13px] font-medium text-neutral-500">Connected Devices</span>
-                      <Sparkline />
-                    </div>
-                  </div>
-                </div>
-
+                ))}
               </div>
 
               {/* Main Content Grid: 70% Chart / 30% Alerts */}
-              <div className="flex flex-col xl:flex-row gap-4 h-[400px]">
+              <div className="flex flex-col xl:flex-row gap-4 lg:h-[400px]">
                 
                 {/* Power Trend Chart */}
-                <div className="xl:w-[70%] bg-[#0B1118] border border-[#ffffff0f] rounded-[12px] p-6 flex flex-col h-full">
+                <div className="xl:w-[70%] bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-4 lg:p-6 flex flex-col h-[300px] lg:h-full">
                   <div className="flex justify-between items-center mb-6 shrink-0">
-                    <h2 className="text-base font-semibold text-white">Power Trend (Live)</h2>
-                    <div className="bg-[#ffffff0a] border border-[#ffffff0f] text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-md flex items-center gap-2 cursor-pointer hover:bg-[#ffffff15] transition-colors">
+                    <h2 className="text-base font-bold text-slate-900">Power Trend (Live)</h2>
+                    <div className="bg-white/50 border border-white/60 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-white/80 shadow-sm transition-colors">
                       Last 30 Minutes
                       <ChevronDown size={14} />
                     </div>
@@ -255,51 +212,29 @@ function App() {
                   <div className="flex-1 min-h-0 w-full ml-[-20px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-                        <CartesianGrid stroke="#ffffff0a" vertical={false} />
-                        <XAxis 
-                          dataKey="time" 
-                          stroke="#6B7280" 
-                          fontSize={11} 
-                          axisLine={false} 
-                          tickLine={false} 
-                          tick={{ fill: '#6B7280' }}
-                          dy={10}
-                        />
-                        <YAxis 
-                          stroke="#6B7280" 
-                          fontSize={11} 
-                          axisLine={false} 
-                          tickLine={false} 
-                          tickFormatter={(val) => `${val}W`}
-                          dx={-10}
-                        />
+                        <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="time" stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} dy={10} />
+                        <YAxis stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} tickFormatter={(val) => `${val}W`} dx={-10} />
                         <Tooltip 
-                          contentStyle={{ backgroundColor: '#0B1118', borderColor: '#ffffff0f', color: '#fff', fontSize: '12px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}
-                          itemStyle={{ color: '#1D7DFF' }}
-                          labelStyle={{ color: '#6B7280', marginBottom: '4px' }}
+                          contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(8px)', borderColor: 'rgba(255,255,255,0.6)', color: '#0f172a', fontSize: '12px', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' }}
+                          itemStyle={{ color: '#2563eb', fontWeight: 600 }}
+                          labelStyle={{ color: '#64748b', marginBottom: '4px', fontWeight: 500 }}
                         />
-                        <Line 
-                          type="monotone" 
-                          dataKey="watts" 
-                          stroke="#1D7DFF" 
-                          strokeWidth={2} 
-                          dot={false}
-                          isAnimationActive={false}
-                        />
+                        <Line type="monotone" dataKey="watts" stroke="#2563eb" strokeWidth={2.5} dot={false} isAnimationActive={false} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
 
                 {/* Alerts Panel */}
-                <div className="xl:w-[30%] bg-[#0B1118] border border-[#ffffff0f] rounded-[12px] p-6 flex flex-col h-full">
+                <div className="xl:w-[30%] bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-4 lg:p-6 flex flex-col h-[300px] lg:h-full">
                   <div className="flex justify-between items-center mb-6 shrink-0">
-                    <h2 className="text-base font-semibold text-white">Active Alerts</h2>
-                    <span className="text-[#1D7DFF] text-xs font-medium cursor-pointer hover:underline">View All</span>
+                    <h2 className="text-base font-bold text-slate-900">Active Alerts</h2>
+                    <span onClick={() => setActiveTab('Alerts')} className="text-blue-600 text-xs font-bold cursor-pointer hover:underline">View All</span>
                   </div>
                   <div className="flex-1 overflow-y-auto no-scrollbar">
                     {alerts.length === 0 ? (
-                      <div className="text-sm text-neutral-500 h-full flex items-center justify-center">System operating normally.</div>
+                      <div className="text-sm font-medium text-slate-400 h-full flex items-center justify-center">System operating normally.</div>
                     ) : (
                       <div className="flex flex-col gap-5">
                         {alerts.map(a => {
@@ -307,19 +242,19 @@ function App() {
                           const isCritical = cleanMsg.toLowerCase().includes('spike');
                           const isWarning = cleanMsg.toLowerCase().includes('vampire');
                           
-                          let dotColor = 'bg-[#1D7DFF]'; // Default info/blue
-                          if (isCritical) dotColor = 'bg-[#FF5252]'; // Danger
-                          if (isWarning) dotColor = 'bg-[#FFB020]'; // Warning
+                          let dotColor = 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]'; 
+                          if (isCritical) dotColor = 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]';
+                          if (isWarning) dotColor = 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]';
 
                           return (
                             <div key={a.id} className="flex items-start gap-3">
-                              <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${dotColor}`}></div>
-                              <div className="flex flex-col gap-1">
-                                <span className="text-[13px] font-semibold text-neutral-200 leading-tight">{
+                              <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${dotColor}`}></div>
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-[13px] font-bold text-slate-800 leading-tight">{
                                   isCritical ? 'High Power Usage' : isWarning ? 'After-Hours Activity' : 'System Notice'
                                 }</span>
-                                <span className="text-[12px] text-neutral-400 leading-snug">{cleanMsg}</span>
-                                <span className="text-[11px] text-neutral-500 mt-1">{a.time}</span>
+                                <span className="text-[12px] font-medium text-slate-500 leading-snug">{cleanMsg}</span>
+                                <span className="text-[11px] font-semibold text-slate-400 mt-1">{a.time}</span>
                               </div>
                             </div>
                           );
@@ -334,8 +269,8 @@ function App() {
               {/* Room Cards Section */}
               <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-center mb-2">
-                  <h2 className="text-base font-semibold text-white">Rooms</h2>
-                  <span className="text-[#1D7DFF] text-xs font-medium cursor-pointer hover:underline">View All Rooms</span>
+                  <h2 className="text-base font-bold text-slate-900">Rooms</h2>
+                  <span onClick={() => setActiveTab('Rooms')} className="text-blue-600 text-xs font-bold cursor-pointer hover:underline">View All Rooms</span>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -346,11 +281,11 @@ function App() {
                     const efficiency = calculateEfficiency(roomDevices);
 
                     return (
-                      <div key={roomName} className="bg-[#0B1118] border border-[#ffffff0f] rounded-[12px] p-6 flex flex-col justify-between h-[180px] hover:-translate-y-0.5 transition-transform duration-200">
+                      <div key={roomName} className="bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-6 flex flex-col justify-between h-[180px] hover:-translate-y-0.5 transition-transform duration-200">
                         <div className="flex justify-between items-start">
-                          <h3 className="text-[15px] font-semibold text-white">{roomName}</h3>
-                          <div className="bg-[#00C853]/10 text-[#00C853] border border-[#00C853]/20 px-2.5 py-1 rounded-full flex items-center gap-1.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#00C853]"></div>
+                          <h3 className="text-[15px] font-bold text-slate-900">{roomName}</h3>
+                          <div className="bg-emerald-50 text-emerald-600 border border-emerald-200/60 shadow-sm px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
                             <span className="text-[10px] font-bold tracking-wide uppercase">Active</span>
                           </div>
                         </div>
@@ -358,27 +293,27 @@ function App() {
                         <div className="flex justify-between items-end">
                           <div className="flex gap-8">
                             <div className="flex flex-col gap-1">
-                              <span className="text-2xl font-bold text-white tracking-tight leading-none">{roomWatts}W</span>
-                              <span className="text-[11px] text-neutral-500 font-medium">Current Usage</span>
+                              <span className="text-2xl font-bold text-slate-900 tracking-tight leading-none">{roomWatts}W</span>
+                              <span className="text-[11px] text-slate-500 font-semibold">Current Usage</span>
                             </div>
                             <div className="flex flex-col gap-1">
-                              <span className="text-2xl font-bold text-white tracking-tight leading-none">{efficiency}%</span>
-                              <span className="text-[11px] text-neutral-500 font-medium">Efficiency</span>
+                              <span className="text-2xl font-bold text-slate-900 tracking-tight leading-none">{efficiency}%</span>
+                              <span className="text-[11px] text-slate-500 font-semibold">Efficiency</span>
                             </div>
                           </div>
                           
-                          <div className="w-16 h-8">
+                          <div className="w-16 h-8 opacity-80">
                              <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={history.slice(-15)}>
-                                  <Line type="monotone" dataKey="watts" stroke="#00C853" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                                  <Line type="monotone" dataKey="watts" stroke="#10b981" strokeWidth={2} dot={false} isAnimationActive={false} />
                                 </LineChart>
                               </ResponsiveContainer>
                           </div>
                         </div>
 
-                        <div className="flex justify-between items-center mt-6 pt-4 border-t border-[#ffffff0f]">
-                          <span className="text-[13px] text-neutral-400 font-medium">{activeCount} / {roomDevices.length} <span className="text-neutral-500 font-normal">Active Devices</span></span>
-                          <button className="bg-[#ffffff05] hover:bg-[#ffffff0a] border border-[#ffffff0f] text-neutral-300 text-[11px] font-medium px-3 py-1.5 rounded-[6px] flex items-center gap-1 transition-colors">
+                        <div className="flex justify-between items-center mt-6 pt-4 border-t border-white/60">
+                          <span className="text-[13px] text-slate-500 font-semibold">{activeCount} / {roomDevices.length} <span className="font-medium">Active Devices</span></span>
+                          <button onClick={() => setActiveTab('Rooms')} className="bg-white hover:bg-slate-50 border border-slate-200 shadow-sm text-slate-700 text-[11px] font-bold px-3 py-1.5 rounded-[8px] flex items-center gap-1 transition-colors">
                             View Details
                             <ChevronRight size={12} />
                           </button>
@@ -400,44 +335,44 @@ function App() {
                 const efficiency = calculateEfficiency(roomDevices);
 
                 return (
-                  <div key={roomName} className="bg-[#0B1118] border border-[#ffffff0f] rounded-[12px] p-6 flex flex-col h-full">
+                  <div key={roomName} className="bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-6 flex flex-col h-full">
                     <div className="flex justify-between items-start mb-6 shrink-0">
                       <div>
-                        <h3 className="text-[16px] font-semibold text-white">{roomName}</h3>
-                        <span className="text-[12px] text-neutral-500 font-medium">{activeCount} of {roomDevices.length} devices active</span>
+                        <h3 className="text-[16px] font-bold text-slate-900">{roomName}</h3>
+                        <span className="text-[12px] text-slate-500 font-semibold">{activeCount} of {roomDevices.length} devices active</span>
                       </div>
-                      <div className="bg-[#00C853]/10 text-[#00C853] border border-[#00C853]/20 px-2.5 py-1 rounded-full flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#00C853]"></div>
+                      <div className="bg-emerald-50 text-emerald-600 border border-emerald-200/60 shadow-sm px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
                         <span className="text-[10px] font-bold tracking-wide uppercase">Active</span>
                       </div>
                     </div>
 
                     <div className="flex gap-8 mb-6 shrink-0">
                       <div className="flex flex-col gap-1">
-                        <span className="text-2xl font-bold text-white tracking-tight leading-none">{roomWatts}W</span>
-                        <span className="text-[11px] text-neutral-500 font-medium">Current Usage</span>
+                        <span className="text-2xl font-bold text-slate-900 tracking-tight leading-none">{roomWatts}W</span>
+                        <span className="text-[11px] text-slate-500 font-semibold">Current Usage</span>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <span className="text-2xl font-bold text-white tracking-tight leading-none">{efficiency}%</span>
-                        <span className="text-[11px] text-neutral-500 font-medium">Efficiency</span>
+                        <span className="text-2xl font-bold text-slate-900 tracking-tight leading-none">{efficiency}%</span>
+                        <span className="text-[11px] text-slate-500 font-semibold">Efficiency</span>
                       </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto no-scrollbar">
                       <div className="flex flex-col gap-2">
                         {roomDevices.map(dev => (
-                          <div key={dev.id} className="flex justify-between items-center p-3 rounded-lg bg-[#ffffff05] border border-[#ffffff0f] hover:border-[#ffffff20] transition-colors">
+                          <div key={dev.id} className="flex justify-between items-center p-3 rounded-[10px] bg-white/40 border border-white/60 hover:bg-white/80 transition-colors shadow-sm">
                             <div className="flex items-center gap-3">
                               {dev.type === 'Fan' ? (
-                                <Fan size={16} className={dev.isOn ? 'text-[#00C853] animate-[spin_2s_linear_infinite]' : 'text-neutral-600'} />
+                                <Fan size={16} className={dev.isOn ? 'text-emerald-500 animate-[spin_2s_linear_infinite]' : 'text-slate-400'} />
                               ) : (
-                                <Lightbulb size={16} className={dev.isOn ? 'text-[#FFB020]' : 'text-neutral-600'} />
+                                <Lightbulb size={16} className={dev.isOn ? 'text-amber-500' : 'text-slate-400'} />
                               )}
-                              <span className="text-[13px] font-medium text-neutral-300">{dev.name}</span>
+                              <span className="text-[13px] font-semibold text-slate-700">{dev.name}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-[10px] uppercase tracking-wider font-semibold text-neutral-500">{dev.isOn ? 'ON' : 'OFF'}</span>
-                              <div className={`w-2 h-2 rounded-full ${dev.isOn ? 'bg-[#00C853] shadow-[0_0_8px_rgba(0,200,83,0.4)] animate-pulse' : 'bg-[#ffffff20]'}`}></div>
+                              <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500">{dev.isOn ? 'ON' : 'OFF'}</span>
+                              <div className={`w-2 h-2 rounded-full ${dev.isOn ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)] animate-pulse' : 'bg-slate-300'}`}></div>
                             </div>
                           </div>
                         ))}
@@ -452,32 +387,32 @@ function App() {
           {activeTab === 'Analytics' && (
             <div className="flex flex-col gap-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-[#0B1118] border border-[#ffffff0f] rounded-[12px] p-5">
-                  <span className="text-[12px] text-neutral-500 font-medium block mb-1">Peak Usage (Today)</span>
-                  <span className="text-[24px] font-bold text-white">412W</span>
+                <div className="bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-5">
+                  <span className="text-[12px] text-slate-500 font-semibold block mb-1">Peak Usage (Today)</span>
+                  <span className="text-[24px] font-bold text-slate-900">412W</span>
                 </div>
-                <div className="bg-[#0B1118] border border-[#ffffff0f] rounded-[12px] p-5">
-                  <span className="text-[12px] text-neutral-500 font-medium block mb-1">Average Efficiency</span>
-                  <span className="text-[24px] font-bold text-white">{overallEfficiency}%</span>
+                <div className="bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-5">
+                  <span className="text-[12px] text-slate-500 font-semibold block mb-1">Average Efficiency</span>
+                  <span className="text-[24px] font-bold text-slate-900">{overallEfficiency}%</span>
                 </div>
-                <div className="bg-[#0B1118] border border-[#ffffff0f] rounded-[12px] p-5">
-                  <span className="text-[12px] text-neutral-500 font-medium block mb-1">Est. Monthly Cost</span>
-                  <span className="text-[24px] font-bold text-white">৳{(costToday * 30).toFixed(2)}</span>
+                <div className="bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-5">
+                  <span className="text-[12px] text-slate-500 font-semibold block mb-1">Est. Monthly Cost</span>
+                  <span className="text-[24px] font-bold text-slate-900">৳{(costToday * 30).toFixed(2)}</span>
                 </div>
               </div>
-              <div className="bg-[#0B1118] border border-[#ffffff0f] rounded-[12px] p-6 h-[500px] flex flex-col">
+              <div className="bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-4 lg:p-6 h-[350px] lg:h-[500px] flex flex-col">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-[15px] font-semibold text-white">Detailed Power Analytics</h2>
-                  <div className="bg-[#ffffff0a] border border-[#ffffff0f] text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-md">Last 24 Hours</div>
+                  <h2 className="text-[15px] font-bold text-slate-900">Detailed Power Analytics</h2>
+                  <div className="bg-white/50 border border-white/60 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm">Last 24 Hours</div>
                 </div>
                 <div className="flex-1 w-full ml-[-20px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-                      <CartesianGrid stroke="#ffffff0a" strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="time" stroke="#6B7280" fontSize={11} axisLine={false} tickLine={false} dy={10} />
-                      <YAxis stroke="#6B7280" fontSize={11} axisLine={false} tickLine={false} tickFormatter={(val) => `${val}W`} dx={-10} />
-                      <Tooltip contentStyle={{ backgroundColor: '#0B1118', borderColor: '#ffffff0f', color: '#fff', fontSize: '12px', borderRadius: '8px' }} itemStyle={{ color: '#1D7DFF' }} labelStyle={{ color: '#6B7280', marginBottom: '4px' }} />
-                      <Line type="monotone" dataKey="watts" stroke="#1D7DFF" strokeWidth={2} dot={{ r: 2, fill: '#1D7DFF', strokeWidth: 0 }} isAnimationActive={false} />
+                      <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="time" stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} dy={10} />
+                      <YAxis stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} tickFormatter={(val) => `${val}W`} dx={-10} />
+                      <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(8px)', borderColor: 'rgba(255,255,255,0.6)', color: '#0f172a', fontSize: '12px', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} itemStyle={{ color: '#2563eb', fontWeight: 600 }} labelStyle={{ color: '#64748b', marginBottom: '4px', fontWeight: 500 }} />
+                      <Line type="monotone" dataKey="watts" stroke="#2563eb" strokeWidth={2.5} dot={{ r: 3, fill: '#2563eb', strokeWidth: 0 }} isAnimationActive={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -486,56 +421,58 @@ function App() {
           )}
 
           {activeTab === 'Alerts' && (
-            <div className="bg-[#0B1118] border border-[#ffffff0f] rounded-[12px] p-6 max-w-3xl">
-              <h2 className="text-[15px] font-semibold text-white mb-6">Security & System Alerts Log</h2>
-              {alerts.length === 0 ? (
-                <div className="text-sm text-neutral-500 py-12 text-center border border-dashed border-[#ffffff0f] rounded-[8px]">No alerts in the system log.</div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  {alerts.map(a => {
-                    const cleanMsg = a.msg.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu, '').trim();
-                    const isCritical = cleanMsg.toLowerCase().includes('spike');
-                    const isWarning = cleanMsg.toLowerCase().includes('vampire');
-                    let dotColor = 'bg-[#1D7DFF]';
-                    if (isCritical) dotColor = 'bg-[#FF5252]';
-                    if (isWarning) dotColor = 'bg-[#FFB020]';
+            <div className="bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-6 flex flex-col h-full w-full">
+              <h2 className="text-[15px] font-bold text-slate-900 mb-6 shrink-0">Security & System Alerts Log</h2>
+                <div className="flex-1 overflow-y-auto no-scrollbar">
+                  {alerts.length === 0 ? (
+                    <div className="text-sm font-semibold text-slate-400 py-12 text-center border border-dashed border-slate-300 rounded-[12px]">No alerts in the system log.</div>
+                  ) : (
+                    <div className="flex flex-col gap-4">
+                      {alerts.map(a => {
+                        const cleanMsg = a.msg.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu, '').trim();
+                        const isCritical = cleanMsg.toLowerCase().includes('spike');
+                        const isWarning = cleanMsg.toLowerCase().includes('vampire');
+                        let dotColor = 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]';
+                        if (isCritical) dotColor = 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]';
+                        if (isWarning) dotColor = 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]';
 
-                    return (
-                      <div key={a.id} className="flex items-start gap-4 p-4 border border-[#ffffff0f] bg-[#ffffff02] rounded-[8px]">
-                        <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${dotColor}`}></div>
-                        <div className="flex flex-col gap-1 w-full">
-                          <div className="flex justify-between items-start">
-                            <span className="text-[14px] font-semibold text-neutral-200">{isCritical ? 'High Power Usage' : isWarning ? 'After-Hours Activity' : 'System Notice'}</span>
-                            <span className="text-[11px] text-neutral-500">{a.time}</span>
+                        return (
+                          <div key={a.id} className="flex items-start gap-4 p-4 border border-white/60 bg-white/40 shadow-sm rounded-[12px] hover:bg-white/70 transition-colors">
+                            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${dotColor}`}></div>
+                            <div className="flex flex-col gap-1 w-full">
+                              <div className="flex justify-between items-start">
+                                <span className="text-[14px] font-bold text-slate-800">{isCritical ? 'High Power Usage' : isWarning ? 'After-Hours Activity' : 'System Notice'}</span>
+                                <span className="text-[11px] font-semibold text-slate-500">{a.time}</span>
+                              </div>
+                              <span className="text-[13px] font-medium text-slate-600">{cleanMsg}</span>
+                            </div>
                           </div>
-                          <span className="text-[13px] text-neutral-400">{cleanMsg}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
           )}
 
           {activeTab === 'Settings' && (
-            <div className="max-w-2xl bg-[#0B1118] border border-[#ffffff0f] rounded-[12px] p-6">
-              <h2 className="text-[15px] font-semibold text-white mb-6">System Configuration</h2>
+            <div className="max-w-2xl bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-6">
+              <h2 className="text-[15px] font-bold text-slate-900 mb-6">System Configuration</h2>
               <div className="flex flex-col gap-6">
                 <div className="flex flex-col gap-2">
-                  <label className="text-[12px] font-medium text-neutral-400 uppercase tracking-wider">Organization Name</label>
-                  <input type="text" disabled value="OfficeIQ Headquarters" className="bg-[#ffffff05] border border-[#ffffff0f] rounded-[8px] px-4 py-2.5 text-[14px] text-neutral-300" />
+                  <label className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">Organization Name</label>
+                  <input type="text" disabled value="OfficeIQ Headquarters" className="bg-white/50 border border-white/80 shadow-sm rounded-[10px] px-4 py-2.5 text-[14px] font-semibold text-slate-800" />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="text-[12px] font-medium text-neutral-400 uppercase tracking-wider">Gateway IP Address</label>
-                  <input type="text" disabled value="192.168.1.104" className="bg-[#ffffff05] border border-[#ffffff0f] rounded-[8px] px-4 py-2.5 text-[14px] text-neutral-300 font-mono" />
+                  <label className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">Gateway IP Address</label>
+                  <input type="text" disabled value="192.168.1.104" className="bg-white/50 border border-white/80 shadow-sm rounded-[10px] px-4 py-2.5 text-[14px] font-semibold text-slate-800 font-mono" />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="text-[12px] font-medium text-neutral-400 uppercase tracking-wider">Firmware Version</label>
-                  <input type="text" disabled value="v2.4.1 (Stable - Managed by IT)" className="bg-[#ffffff05] border border-[#ffffff0f] rounded-[8px] px-4 py-2.5 text-[14px] text-neutral-300" />
+                  <label className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">Firmware Version</label>
+                  <input type="text" disabled value="v2.4.1 (Stable - Managed by IT)" className="bg-white/50 border border-white/80 shadow-sm rounded-[10px] px-4 py-2.5 text-[14px] font-semibold text-slate-800" />
                 </div>
-                <div className="pt-4 border-t border-[#ffffff0f]">
-                  <button disabled className="bg-[#1D7DFF]/50 text-white/50 text-[13px] font-medium px-4 py-2 rounded-[8px] cursor-not-allowed">
+                <div className="pt-4 border-t border-white/60">
+                  <button disabled className="bg-slate-100 text-slate-400 border border-slate-200 text-[13px] font-bold px-4 py-2 rounded-[10px] cursor-not-allowed">
                     Save Changes (Requires Admin)
                   </button>
                 </div>
@@ -544,6 +481,30 @@ function App() {
           )}
 
         </div>
+
+        {/* Mobile Bottom Navigation */}
+        <nav className="lg:hidden fixed bottom-0 left-0 w-full bg-white/70 backdrop-blur-2xl border-t border-white/60 shadow-[0_-8px_30px_rgb(0,0,0,0.04)] z-50 px-2 pb-safe pt-2">
+          <div className="flex justify-around items-center h-14">
+            {tabs.map(tab => {
+              const isActive = activeTab === tab.name;
+              return (
+                <button
+                  key={tab.name}
+                  onClick={() => setActiveTab(tab.name)}
+                  className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${
+                    isActive ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  <div className={`p-1.5 rounded-full ${isActive ? 'bg-blue-50' : 'bg-transparent'}`}>
+                    {tab.icon}
+                  </div>
+                  <span className={`text-[10px] font-bold ${isActive ? 'text-blue-600' : 'text-slate-500'}`}>{tab.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+
       </main>
     </div>
   );

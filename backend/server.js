@@ -128,8 +128,14 @@ client.on('messageCreate', async (message) => {
     let responseText = '';
     ROOMS.forEach(room => {
       const roomDevices = globalState.filter(d => d.room === room);
-      const onCount = roomDevices.filter(d => d.isOn).length;
-      responseText += `**${room}:** ${onCount}/${roomDevices.length} ON\n`;
+      const fans = roomDevices.filter(d => d.type === 'Fan');
+      const lights = roomDevices.filter(d => d.type === 'Light');
+      const onFans = fans.filter(d => d.isOn).length;
+      const onLights = lights.filter(d => d.isOn).length;
+      
+      responseText += `**${room}**\n`;
+      responseText += ` └ 🌬️ Fans: ${onFans}/${fans.length} ON\n`;
+      responseText += ` └ 💡 Lights: ${onLights}/${lights.length} ON\n\n`;
     });
     
     const embed = new EmbedBuilder()
