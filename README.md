@@ -63,6 +63,14 @@ npm run dev
 ---
 
 ## 🔌 Hardware Simulation
-While this is a software simulation, the architecture is designed to map directly to physical hardware (e.g., an ESP32 microcontroller reading slide switches on GPIO pins 12, 13, 14, 26, 27). 
+While this is a software simulation, the architecture is designed to map directly to physical hardware. We have designed a complete ESP32 schematic and PCB layout for a representative room (2 Fans, 3 Lights).
 
-*(See the `diagrams/` folder for the high-level architecture and Wokwi schematic).*
+### Electrical Schematic
+*(The ESP32 uses internal `INPUT_PULLUP` resistors to read the states, mapped to GPIO 12, 13, 14, 26, 27).*
+
+![Circuit Schematic](hardware/schematic.png)
+
+### PCB Layout Routing
+*(Custom PCB routing demonstrating the physical viability of the monitor node).*
+
+![PCB Layout](hardware/pcb_layout.png)
