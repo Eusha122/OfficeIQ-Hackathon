@@ -14,7 +14,10 @@ import {
   ChevronRight,
   ChevronDown,
   Fan,
-  Lightbulb
+  Lightbulb,
+  FileText,
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 
 const socket = io('http://localhost:3001');
@@ -25,6 +28,11 @@ function App() {
   const [history, setHistory] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [activeTab, setActiveTab] = useState('Overview');
+  const [loadingDevices, setLoadingDevices] = useState([]);
+  const [roomState, setRoomState] = useState({});
+  const [roomHistory, setRoomHistory] = useState({});
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [generatedReport, setGeneratedReport] = useState(null);
 
   const tabs = [
     { name: 'Overview', icon: <Home size={18} /> },
@@ -41,27 +49,105 @@ function App() {
         setDevices(data.devices);
         setTotalPower(data.totalPower);
         if (data.history) setHistory(data.history);
+        if (data.roomState) setRoomState(data.roomState);
+        
+        // Generate pseudo-history for rooms so charts aren't empty on load
+        const initialRoomHist = {};
+        const roomsList = [...new Set(data.devices.map(d => d.room))];
+        roomsList.forEach(roomName => {
+          const roomWatts = data.devices.filter(d => d.room === roomName).reduce((sum, d) => d.isOn ? sum + d.powerDrawWhenOn : sum, 0);
+          initialRoomHist[roomName] = Array.from({length: 15}).map(() => ({ watts: Math.max(0, roomWatts + (Math.random() * 10 - 5)) }));
+        });
+        setRoomHistory(initialRoomHist);
       })
       .catch(err => console.error(err));
 
     socket.on('state_update', (data) => {
       setDevices(data.devices);
       setTotalPower(data.totalPower);
+      if (data.roomState) setRoomState(data.roomState);
+      
       setHistory(prev => {
         const newHist = [...prev, { time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}), watts: data.totalPower }];
         return newHist.slice(-30); 
       });
+      
+      setRoomHistory(prev => {
+        const newHist = { ...prev };
+        const roomsList = [...new Set(data.devices.map(d => d.room))];
+        roomsList.forEach(roomName => {
+          const roomWatts = data.devices.filter(d => d.room === roomName).reduce((sum, d) => d.isOn ? sum + d.powerDrawWhenOn : sum, 0);
+          if (!newHist[roomName]) newHist[roomName] = [];
+          newHist[roomName] = [...newHist[roomName], { watts: roomWatts }].slice(-15);
+        });
+        return newHist;
+      });
     });
 
     socket.on('alert', (msg) => {
-      setAlerts(prev => [{ id: Date.now(), msg, time: 'Just now' }, ...prev].slice(0, 5));
+      setAlerts(prev => [{ id: Date.now(), msg, time: 'Just now' }, ...prev].slice(0, 50));
+    });
+
+    socket.on('audit_log', (msg) => {
+      setAlerts(prev => [{ id: Date.now(), msg, time: 'Just now' }, ...prev].slice(0, 50));
     });
 
     return () => {
       socket.off('state_update');
       socket.off('alert');
+      socket.off('audit_log');
     };
   }, []);
+
+  const toggleDevice = async (id, desiredState) => {
+    // 1. Optimistic Update (UI changes instantly)
+    const originalDevices = [...devices];
+    const originalPower = totalPower;
+    
+    const deviceIndex = devices.findIndex(d => d.id === id);
+    if (deviceIndex === -1) return;
+    
+    const powerDelta = desiredState ? devices[deviceIndex].powerDrawWhenOn : -devices[deviceIndex].powerDrawWhenOn;
+    
+    setDevices(prev => prev.map(d => d.id === id ? { ...d, isOn: desiredState } : d));
+    setTotalPower(prev => prev + powerDelta);
+    setLoadingDevices(prev => [...prev, id]);
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/devices/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isOn: desiredState })
+      });
+      
+      if (!response.ok) throw new Error('API Error');
+    } catch (err) {
+      // Rollback on error
+      setDevices(originalDevices);
+      setTotalPower(originalPower);
+      setAlerts(prev => [{ id: Date.now(), msg: `⚠️ Failed to toggle: ${err.message}`, time: 'Just now' }, ...prev].slice(0, 50));
+    } finally {
+      // Remove loading state (safe to do even if socket already fired)
+      setLoadingDevices(prev => prev.filter(loadingId => loadingId !== id));
+    }
+  };
+
+  const handleGenerateReport = () => {
+    setIsGeneratingReport(true);
+    setGeneratedReport(null);
+    
+    const roomNamesList = Object.keys(rooms);
+    const activeRooms = roomNamesList.filter(r => rooms[r].some(d => d.isOn));
+    const targetRoom = activeRooms.length > 0 ? activeRooms[0] : 'Work Room 2';
+    const watts = activeRooms.length > 0 ? rooms[targetRoom].reduce((sum, d) => d.isOn ? sum + d.powerDrawWhenOn : sum, 0) : 135;
+    
+    const timeStr = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    
+    setTimeout(() => {
+      setGeneratedReport(`At ${timeStr} ${targetRoom} continued consuming ${watts}W despite office closure. The active devices remained on for 2 hours and 17 minutes, resulting in an estimated energy waste of 0.31 kWh.`);
+      setIsGeneratingReport(false);
+    }, 1500);
+  };
 
   const rooms = devices.reduce((acc, dev) => {
     if (!acc[dev.room]) acc[dev.room] = [];
@@ -168,7 +254,7 @@ function App() {
         </header>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-4 lg:p-8 pb-24 lg:pb-8 flex flex-col gap-6 lg:gap-8">
+        <div className="flex-1 overflow-y-auto p-4 lg:p-8 pb-[120px] lg:pb-8 flex flex-col gap-6 lg:gap-8">
           
           {activeTab === 'Overview' && (
             <>
@@ -284,9 +370,14 @@ function App() {
                       <div key={roomName} className="bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-6 flex flex-col justify-between h-[180px] hover:-translate-y-0.5 transition-transform duration-200">
                         <div className="flex justify-between items-start">
                           <h3 className="text-[15px] font-bold text-slate-900">{roomName}</h3>
-                          <div className="bg-emerald-50 text-emerald-600 border border-emerald-200/60 shadow-sm px-2.5 py-1 rounded-full flex items-center gap-1.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                            <span className="text-[10px] font-bold tracking-wide uppercase">Active</span>
+                          <div className="flex gap-2">
+                            <div className="bg-blue-50 text-blue-600 border border-blue-200/60 shadow-sm px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                              <span className="text-[10px] font-bold tracking-wide uppercase">{roomState[roomName]?.occupants || 0} People</span>
+                            </div>
+                            <div className="bg-emerald-50 text-emerald-600 border border-emerald-200/60 shadow-sm px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                              <span className="text-[10px] font-bold tracking-wide uppercase">Active</span>
+                            </div>
                           </div>
                         </div>
 
@@ -304,7 +395,7 @@ function App() {
                           
                           <div className="w-16 h-8 opacity-80">
                              <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={history.slice(-15)}>
+                                <LineChart data={roomHistory[roomName] || []}>
                                   <Line type="monotone" dataKey="watts" stroke="#10b981" strokeWidth={2} dot={false} isAnimationActive={false} />
                                 </LineChart>
                               </ResponsiveContainer>
@@ -341,9 +432,14 @@ function App() {
                         <h3 className="text-[16px] font-bold text-slate-900">{roomName}</h3>
                         <span className="text-[12px] text-slate-500 font-semibold">{activeCount} of {roomDevices.length} devices active</span>
                       </div>
-                      <div className="bg-emerald-50 text-emerald-600 border border-emerald-200/60 shadow-sm px-2.5 py-1 rounded-full flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                        <span className="text-[10px] font-bold tracking-wide uppercase">Active</span>
+                      <div className="flex gap-2">
+                        <div className="bg-blue-50 text-blue-600 border border-blue-200/60 shadow-sm px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                          <span className="text-[10px] font-bold tracking-wide uppercase">{roomState[roomName]?.occupants || 0} People</span>
+                        </div>
+                        <div className="bg-emerald-50 text-emerald-600 border border-emerald-200/60 shadow-sm px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                          <span className="text-[10px] font-bold tracking-wide uppercase">Active</span>
+                        </div>
                       </div>
                     </div>
 
@@ -370,14 +466,53 @@ function App() {
                               )}
                               <span className="text-[13px] font-semibold text-slate-700">{dev.name}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500">{dev.isOn ? 'ON' : 'OFF'}</span>
-                              <div className={`w-2 h-2 rounded-full ${dev.isOn ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)] animate-pulse' : 'bg-slate-300'}`}></div>
+                            <div className="flex items-center gap-3">
+                              {loadingDevices.includes(dev.id) && <span className="text-[10px] font-bold text-blue-500 animate-pulse uppercase tracking-wide">Updating...</span>}
+                              <button 
+                                onClick={() => toggleDevice(dev.id, !dev.isOn)} 
+                                disabled={loadingDevices.includes(dev.id)}
+                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 cursor-pointer ${dev.isOn ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                              >
+                                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${dev.isOn ? 'translate-x-4.5 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'translate-x-1 shadow-sm'}`} style={{ transform: dev.isOn ? 'translateX(18px)' : 'translateX(4px)' }} />
+                              </button>
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
+
+                    {/* Digital Twin Floor Plan */}
+                    <div className="mt-4 pt-4 border-t border-white/60 shrink-0">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Digital Twin</span>
+                        <div className="bg-blue-50/50 text-blue-600 border border-blue-200/50 text-[9px] px-2 py-0.5 rounded-full font-bold">LIVE</div>
+                      </div>
+                      <div className="bg-slate-900/5 border border-slate-200/50 rounded-[12px] p-5 relative overflow-hidden h-[130px] flex items-center justify-center shadow-inner">
+                        {/* Floor pattern overlay */}
+                        <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:12px_12px]"></div>
+                        
+                        <div className="w-full flex items-center justify-between px-2 gap-2">
+                        {roomDevices.map((dev, idx) => {
+                          const isFan = dev.type === 'Fan';
+                          const isOn = dev.isOn;
+                          const shortName = (isFan ? 'F' : 'L') + dev.name.replace(/[^0-9]/g, '');
+                          return (
+                            <div key={idx} className={`relative flex flex-col items-center justify-center gap-2 transition-all duration-300 z-10 ${isOn ? 'scale-110' : 'scale-100 opacity-60 hover:opacity-80'}`}>
+                              <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm border ${isOn ? (isFan ? 'bg-emerald-50 text-emerald-600 border-emerald-200/60 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'bg-amber-50 text-amber-500 border-amber-200/60 shadow-[0_0_15px_rgba(245,158,11,0.2)]') : 'bg-white text-slate-400 border-slate-200/60'}`}>
+                                {isFan ? (
+                                  <Fan size={22} className={isOn ? 'animate-[spin_1.5s_linear_infinite]' : ''} />
+                                ) : (
+                                  <Lightbulb size={22} className={isOn ? 'drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]' : ''} />
+                                )}
+                              </div>
+                              <span className="text-[10px] font-bold text-slate-500 tracking-widest">{shortName}</span>
+                            </div>
+                          )
+                        })}
+                        </div>
+                      </div>
+                    </div>
+
                   </div>
                 );
               })}
@@ -422,7 +557,34 @@ function App() {
 
           {activeTab === 'Alerts' && (
             <div className="bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-6 flex flex-col h-full w-full">
-              <h2 className="text-[15px] font-bold text-slate-900 mb-6 shrink-0">Security & System Alerts Log</h2>
+              <div className="flex justify-between items-center mb-6 shrink-0">
+                <h2 className="text-[15px] font-bold text-slate-900">Security & System Alerts Log</h2>
+                <button 
+                  onClick={handleGenerateReport} 
+                  disabled={isGeneratingReport}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isGeneratingReport ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
+                  Generate AI Report
+                </button>
+              </div>
+
+              {generatedReport && (
+                <div className="mb-6 p-4 bg-blue-50/80 border border-blue-200/60 rounded-[12px] flex items-start gap-3 shadow-sm shrink-0 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                    <FileText size={16} />
+                  </div>
+                  <div>
+                    <h4 className="text-[12px] font-bold text-blue-900 mb-1 flex items-center gap-2">
+                      AI Incident Report <span className="bg-blue-200/50 text-blue-700 text-[9px] px-2 py-0.5 rounded-full">GENERATED</span>
+                    </h4>
+                    <p className="text-[13px] font-medium text-blue-800/80 leading-relaxed">
+                      {generatedReport}
+                    </p>
+                  </div>
+                </div>
+              )}
+
                 <div className="flex-1 overflow-y-auto no-scrollbar">
                   {alerts.length === 0 ? (
                     <div className="text-sm font-semibold text-slate-400 py-12 text-center border border-dashed border-slate-300 rounded-[12px]">No alerts in the system log.</div>

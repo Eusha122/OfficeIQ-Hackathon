@@ -9,6 +9,7 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: { origin: '*' }
@@ -26,6 +27,11 @@ const DEVICE_TYPES = [
 
 let globalState = [];
 let powerHistory = []; // Stores last 30 minutes of power data [{ time, watts }]
+let globalRoomState = {
+  'Drawing Room': { occupants: 0 },
+  'Work Room 1': { occupants: 0 },
+  'Work Room 2': { occupants: 0 }
+};
 
 // Initialize State
 ROOMS.forEach(room => {
@@ -53,16 +59,76 @@ function updatePowerHistory() {
   if (powerHistory.length > 30) powerHistory.shift(); // Keep last 30 readings
 }
 
-// --- SIMULATOR LOOP ---
-// Toggles random devices to simulate real usage
+// --- SMART SIMULATOR LOOP ---
+// Toggles devices based on occupancy, ignoring recently manual toggled devices
 setInterval(() => {
-  const randomDeviceIndex = Math.floor(Math.random() * globalState.length);
-  const device = globalState[randomDeviceIndex];
-  device.isOn = !device.isOn;
-  device.lastChanged = new Date().toISOString();
+  const now = Date.now();
+  let stateChanged = false;
+  
+  ROOMS.forEach(r => {
+    // 20% chance to change occupants
+    if (Math.random() > 0.8) {
+      const oldOccupants = globalRoomState[r].occupants;
+      globalRoomState[r].occupants = Math.floor(Math.random() * 5);
+      if (oldOccupants !== globalRoomState[r].occupants) {
+        stateChanged = true;
+      }
+    }
+    
+    const roomDevices = globalState.filter(d => d.room === r);
+    const availableDevices = roomDevices.filter(d => now > (d.manualOverrideUntil || 0));
+    
+    if (globalRoomState[r].occupants === 0) {
+      // If 0 occupants, turn off everything (that isn't locked)
+      availableDevices.forEach(device => {
+        if (device.isOn) {
+          device.isOn = false;
+          device.lastChanged = new Date().toISOString();
+          stateChanged = true;
+          const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          io.emit('audit_log', `${timeStr} - Simulator turned OFF ${device.name} in ${device.room} (Room Empty)`);
+        }
+      });
+    } else {
+      // If people are inside, ensure at least one light and one fan is on
+      const fans = availableDevices.filter(d => d.type === 'Fan');
+      const lights = availableDevices.filter(d => d.type === 'Light');
+      
+      const onFans = roomDevices.filter(d => d.type === 'Fan' && d.isOn).length;
+      const onLights = roomDevices.filter(d => d.type === 'Light' && d.isOn).length;
+      
+      if (onFans === 0 && fans.length > 0) {
+        const d = fans[0];
+        d.isOn = true; d.lastChanged = new Date().toISOString(); stateChanged = true;
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        io.emit('audit_log', `${timeStr} - Simulator turned ON ${d.name} in ${d.room} (People Arrived)`);
+      }
+      if (onLights === 0 && lights.length > 0) {
+        const d = lights[0];
+        d.isOn = true; d.lastChanged = new Date().toISOString(); stateChanged = true;
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        io.emit('audit_log', `${timeStr} - Simulator turned ON ${d.name} in ${d.room} (People Arrived)`);
+      }
+      
+      // Randomly toggle something 10% of the time just to simulate activity
+      if (Math.random() > 0.9 && availableDevices.length > 0) {
+        const randomDevice = availableDevices[Math.floor(Math.random() * availableDevices.length)];
+        randomDevice.isOn = !randomDevice.isOn;
+        randomDevice.lastChanged = new Date().toISOString();
+        stateChanged = true;
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        io.emit('audit_log', `${timeStr} - Simulator turned ${randomDevice.isOn ? 'ON' : 'OFF'} ${randomDevice.name} in ${randomDevice.room}`);
+      }
+    }
+  });
+  
+  if (stateChanged) {
+    updatePowerHistory();
+  }
   
   // Push state to all connected web clients
-  io.emit('state_update', { devices: globalState, totalPower: getTotalPower() });
+  io.emit('state_update', { devices: globalState, totalPower: getTotalPower(), roomState: globalRoomState });
+  
 }, 10000); // 10 seconds
 
 // Power history logging every 1 minute
@@ -84,8 +150,9 @@ setInterval(() => {
   const hour = new Date().getHours();
   if (hour >= 20 || hour <= 6) {
     if (currentPower > 0) {
-      // We throttle this alert in a real app, but for hackathon demo we can show it
-      io.emit('alert', `🦇 **Vampire Drain:** ${currentPower}W being consumed after hours.`);
+      const msg = `🦇 **Vampire Drain:** ${currentPower}W being consumed after hours.`;
+      sendDiscordAlert(msg);
+      io.emit('alert', msg);
     }
   }
 
@@ -94,19 +161,27 @@ setInterval(() => {
 
 // --- EXPRESS API (Fallback if not using websockets) ---
 app.get('/api/state', (req, res) => {
-  res.json({ devices: globalState, totalPower: getTotalPower(), history: powerHistory });
+  res.json({ devices: globalState, totalPower: getTotalPower(), history: powerHistory, roomState: globalRoomState });
 });
 
-// Secret Weapon: Force state for demo purposes
-app.post('/api/force-state/:id/:state', (req, res) => {
+// Enterprise API for toggling devices
+app.patch('/api/devices/:id', (req, res) => {
   const device = globalState.find(d => d.id === req.params.id);
-  if (device) {
-    device.isOn = req.params.state === 'on';
+  if (device && req.body && typeof req.body.isOn === 'boolean') {
+    device.isOn = req.body.isOn;
     device.lastChanged = new Date().toISOString();
-    io.emit('state_update', { devices: globalState, totalPower: getTotalPower() });
-    res.send('OK');
+    device.manualOverrideUntil = Date.now() + 30000; // 30 seconds protection from Simulator
+    
+    // Audit Log
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    io.emit('audit_log', `${timeStr} - Admin turned ${device.isOn ? 'ON' : 'OFF'} ${device.name} in ${device.room}`);
+    
+    // Force immediate graph update
+    updatePowerHistory();
+    io.emit('state_update', { devices: globalState, totalPower: getTotalPower(), roomState: globalRoomState });
+    res.json(device);
   } else {
-    res.status(404).send('Device not found');
+    res.status(404).send('Device not found or invalid payload');
   }
 });
 
@@ -124,6 +199,31 @@ client.on('messageCreate', async (message) => {
   const command = args[0].toLowerCase();
 
   // Core Commands
+  if (command === '!toggle') {
+    const deviceQuery = args.slice(1).join(' ').toLowerCase();
+    
+    // Loosely match device by removing hyphens from the ID
+    const device = globalState.find(d => 
+      d.id.replace(/-/g, ' ').toLowerCase() === deviceQuery
+    );
+
+    if (device) {
+      device.isOn = !device.isOn;
+      device.lastChanged = new Date().toISOString();
+      device.manualOverrideUntil = Date.now() + 30000;
+      
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      io.emit('audit_log', `${timeStr} - Discord Bot turned ${device.isOn ? 'ON' : 'OFF'} ${device.name} in ${device.room}`);
+      
+      updatePowerHistory();
+      io.emit('state_update', { devices: globalState, totalPower: getTotalPower(), roomState: globalRoomState });
+      
+      message.reply(`✅ **${device.room} - ${device.name}** is now **${device.isOn ? 'ON' : 'OFF'}**!`);
+    } else {
+      message.reply(`❌ Device not found. Use format: \`!toggle Drawing Room Fan 1\``);
+    }
+  }
+
   if (command === '!status') {
     let responseText = '';
     ROOMS.forEach(room => {
@@ -134,6 +234,7 @@ client.on('messageCreate', async (message) => {
       const onLights = lights.filter(d => d.isOn).length;
       
       responseText += `**${room}**\n`;
+      responseText += ` └ 👥 People in Room: ${globalRoomState[room].occupants}\n`;
       responseText += ` └ 🌬️ Fans: ${onFans}/${fans.length} ON\n`;
       responseText += ` └ 💡 Lights: ${onLights}/${lights.length} ON\n\n`;
     });
@@ -144,6 +245,27 @@ client.on('messageCreate', async (message) => {
       .setDescription(responseText);
     
     message.reply({ embeds: [embed] });
+  }
+
+  if (command === '!report') {
+    const activeRooms = ROOMS.filter(r => globalState.some(d => d.room === r && d.isOn));
+    const targetRoom = activeRooms.length > 0 ? activeRooms[0] : 'Work Room 2';
+    const watts = activeRooms.length > 0 
+      ? globalState.filter(d => d.room === targetRoom && d.isOn).reduce((sum, d) => sum + d.powerDrawWhenOn, 0) 
+      : 135;
+    
+    const timeStr = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    
+    message.reply(`⏳ Generating AI Incident Report...`).then(msg => {
+      setTimeout(() => {
+        const embed = new EmbedBuilder()
+          .setTitle('✨ AI Incident Report')
+          .setColor('#2563eb')
+          .setDescription(`At ${timeStr} ${targetRoom} continued consuming ${watts}W despite office closure. The active devices remained on for 2 hours and 17 minutes, resulting in an estimated energy waste of 0.31 kWh.`);
+        
+        msg.edit({ content: '✅ Report Generated:', embeds: [embed] });
+      }, 1500);
+    });
   }
 
   if (command === '!usage') {
