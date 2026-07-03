@@ -557,12 +557,12 @@ function App() {
 
           {activeTab === 'Alerts' && (
             <div className="bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-6 flex flex-col h-full w-full">
-              <div className="flex justify-between items-center mb-6 shrink-0">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-6 shrink-0">
                 <h2 className="text-[15px] font-bold text-slate-900">Security & System Alerts Log</h2>
                 <button 
                   onClick={handleGenerateReport} 
                   disabled={isGeneratingReport}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed shrink-0 whitespace-nowrap"
                 >
                   {isGeneratingReport ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
                   Generate AI Report

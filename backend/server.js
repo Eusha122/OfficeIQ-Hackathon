@@ -136,6 +136,7 @@ setInterval(updatePowerHistory, 60000);
 
 // --- ALERT ENGINE ---
 let previousTotalPower = 0;
+let lastVampireAlert = 0;
 setInterval(() => {
   const currentPower = getTotalPower();
   
@@ -149,10 +150,22 @@ setInterval(() => {
   // 2. Vampire Drain (Assuming current time is after hours for simulation)
   const hour = new Date().getHours();
   if (hour >= 20 || hour <= 6) {
-    if (currentPower > 0) {
-      const msg = `🦇 **Vampire Drain:** ${currentPower}W being consumed after hours.`;
+    // Only alert once every 10 minutes to prevent spam
+    if (currentPower > 0 && Date.now() - lastVampireAlert > 600000) {
+      const emptyRoomsWithPower = ROOMS.filter(r => globalRoomState[r].occupants === 0 && globalState.some(d => d.room === r && d.isOn));
+      let msg = `🦇 **Vampire Drain:** ${currentPower}W being consumed after hours.`;
+      
+      if (emptyRoomsWithPower.length > 0) {
+        const targetRoom = emptyRoomsWithPower[0];
+        const onFans = globalState.filter(d => d.room === targetRoom && d.type === 'Fan' && d.isOn).length;
+        const onLights = globalState.filter(d => d.room === targetRoom && d.type === 'Light' && d.isOn).length;
+        const timeFormatted = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        msg = `Hey! ${targetRoom} still has ${onFans} fans and ${onLights} lights ON and it's ${timeFormatted}. Did someone forget to leave?`;
+      }
+
       sendDiscordAlert(msg);
       io.emit('alert', msg);
+      lastVampireAlert = Date.now();
     }
   }
 
@@ -199,6 +212,24 @@ client.on('messageCreate', async (message) => {
   const command = args[0].toLowerCase();
 
   // Core Commands
+  if (command === '!help') {
+    const embed = new EmbedBuilder()
+      .setTitle('🛠️ OfficeIQ Bot Commands')
+      .setColor('#f59e0b')
+      .setDescription('Here are all the available commands to control and monitor the office:')
+      .addFields(
+        { name: '`!status`', value: 'Shows an overview of all rooms (occupants, fans, lights).' },
+        { name: '`!room <name>`', value: 'Shows detailed status of a specific room (e.g. `!room work 1`).' },
+        { name: '`!toggle <device>`', value: 'Turns a specific device ON/OFF (e.g. `!toggle Drawing Room Fan 1`).' },
+        { name: '`!usage`', value: 'Shows total current power usage and estimated cost rate.' },
+        { name: '`!report`', value: 'Generates an AI incident report for any after-hours energy waste.' },
+        { name: '`!boss`', value: 'Asks the AI facilities manager for a sarcastic analysis of current usage.' }
+      )
+      .setFooter({ text: 'OfficeIQ Smart System' });
+
+    message.reply({ embeds: [embed] });
+  }
+
   if (command === '!toggle') {
     const deviceQuery = args.slice(1).join(' ').toLowerCase();
     
@@ -310,15 +341,22 @@ client.on('messageCreate', async (message) => {
 
   // AI Enhanced Command
   if (command === '!boss') {
-    // Generate prompt based on state
+    const question = args.slice(1).join(' ');
     const watts = getTotalPower();
-    const prompt = `You are an experienced facilities manager with a sarcastic personality. Analyze the office energy usage in under 2 sentences. Current state: We are drawing ${watts}W.`;
     
+    // Build real simulated data context
+    const activeDevices = globalState.filter(d => d.isOn).map(d => `${d.name} in ${d.room}`).join(', ');
+    const occupiedRooms = ROOMS.filter(r => globalRoomState[r].occupants > 0).map(r => `${r} (${globalRoomState[r].occupants} people)`).join(', ');
+    const context = `Current office state: ${watts}W total power. Occupied rooms: ${occupiedRooms || 'None'}. Devices currently ON: ${activeDevices || 'None'}.`;
+    
+    const systemPrompt = "You are OfficeIQ, a highly intelligent, humanized, and friendly AI assistant managing an office building. The boss hates robotic data dumps, so always provide conversational, helpful, and natural answers based EXACTLY on the real-time context provided. Keep your answers under 3 sentences.";
+    const userPrompt = `${systemPrompt}\n\nContext: ${context}\n\nBoss asks: ${question || "How is the office looking right now?"}`;
+
     message.channel.send('🤔 Thinking...');
     
     try {
       if (!process.env.DO_AI_ENDPOINT) {
-         message.reply("Boss is currently unavailable (No AI Endpoint configured).");
+         message.reply("I am currently unavailable (No AI Endpoint configured).");
          return;
       }
 
@@ -330,7 +368,9 @@ client.on('messageCreate', async (message) => {
           'Authorization': `Bearer ${process.env.DO_AI_API_KEY}`
         },
         body: JSON.stringify({
-          messages: [{ role: "user", content: prompt }]
+          messages: [
+            { role: "user", content: userPrompt }
+          ]
         }) 
       });
       
@@ -341,12 +381,12 @@ client.on('messageCreate', async (message) => {
       const data = await aiResponse.json();
       const text = data.choices && data.choices[0] && data.choices[0].message 
                    ? data.choices[0].message.content 
-                   : "Speechless.";
+                   : "I'm a bit speechless right now.";
       
-      message.reply(`👔 **Boss says:**\n"${text}"`);
+      message.reply(`🤖 **OfficeIQ AI:**\n${text}`);
     } catch (err) {
       console.error("AI Fetch Error:", err);
-      message.reply("Boss is currently unavailable (AI Endpoint Error).");
+      message.reply("I am currently unavailable (AI Endpoint Error).");
     }
   }
 });
