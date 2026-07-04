@@ -297,6 +297,12 @@ client.on('messageCreate', async (message) => {
 
   if (command === '!room') {
     const roomQuery = args.slice(1).join(' ').toLowerCase();
+    
+    if (!roomQuery) {
+      message.reply(`❌ Please specify a room. Try \`!room drawing\` or \`!room work 1\``);
+      return;
+    }
+
     const matchedRoom = ROOMS.find(r => r.toLowerCase().includes(roomQuery) || r.replace(/ /g, '').toLowerCase().includes(roomQuery));
 
     if (matchedRoom) {
