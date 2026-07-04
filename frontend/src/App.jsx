@@ -253,7 +253,7 @@ function App() {
         <header className="h-[72px] border-b border-white/60 bg-white/40 backdrop-blur-xl flex items-center justify-between px-4 lg:px-8 shrink-0 z-30">
           <div className="flex flex-col">
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">{activeTab}</h1>
-            <p className="text-sm text-slate-500 font-medium">
+            <p className="text-sm text-slate-500 font-medium hidden sm:block">
               {activeTab === 'Overview' && 'Real-time energy monitoring across all rooms'}
               {activeTab === 'Rooms' && 'Manage and monitor individual room environments'}
               {activeTab === 'Analytics' && 'Detailed power consumption and efficiency metrics'}
@@ -262,13 +262,13 @@ function App() {
             </p>
           </div>
           
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <div className="flex flex-col items-end">
-              <span className="text-sm font-bold text-slate-800">{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <span className="text-sm font-bold text-slate-800 whitespace-nowrap">{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               <span className="text-[11px] font-semibold text-slate-500 hidden sm:block">{currentTime.toLocaleDateString()}</span>
             </div>
-            <div className={`px-3 py-1.5 rounded-full border text-[11px] font-bold tracking-wide shadow-sm flex items-center gap-1.5 ${isOfficeHours ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'}`}>
-              <div className={`w-1.5 h-1.5 rounded-full ${isOfficeHours ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`}></div>
+            <div className={`px-3 py-1.5 rounded-full border text-[11px] font-bold tracking-wide shadow-sm flex items-center gap-1.5 shrink-0 whitespace-nowrap ${isOfficeHours ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'}`}>
+              <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOfficeHours ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`}></div>
               {isOfficeHours ? 'OFFICE HOURS' : 'AFTER HOURS'}
             </div>
           </div>
