@@ -90,5 +90,5 @@ The prototype uses an **Arduino Uno** to control a representative smart room:
 
 When a person breaks the ultrasonic beam, the Arduino increments the room count and instantly updates the physical LCD screen. As long as the count is >0, the lights and fans are powered on. When the count reaches 0, the system shuts down, perfectly mimicking the Node.js backend simulator.
 
-📄 **[View the Full Hardware Schematic (PDF)](hardware\office iq.pdf)**
+📄 **[View the Full Hardware Schematic (PDF)](hardware/office%20iq.pdf)**
 💻 **[View the Arduino Source Code](hardware/office_iq_node.ino)**
