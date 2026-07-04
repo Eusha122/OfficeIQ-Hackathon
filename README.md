@@ -6,6 +6,17 @@ This project was built for the IUT Techathon Nationals & Rover Summit.
 
 ---
 
+## 🚀 Live Demo & Judging Links
+
+Judges can instantly test the real-time nature of OfficeIQ here:
+
+1. **Live Dashboard:** [https://officeiq.safeshare.co](https://officeiq.safeshare.co)
+2. **Interactive AI Discord Bot:** [INSERT YOUR DISCORD INVITE LINK HERE]
+
+**Try this live test:** Open the dashboard and the Discord server side-by-side. Type `!toggle Drawing Room Light 1` in Discord, and watch the dashboard light switch instantly animate and the power consumption graph spike!
+
+---
+
 ## Architecture: The Monolith Advantage
 
 To ensure zero latency and perfect synchronization, OfficeIQ uses a Single-Process Monolith architecture:

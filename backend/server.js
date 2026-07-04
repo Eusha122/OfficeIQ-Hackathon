@@ -71,15 +71,15 @@ setInterval(() => {
   const isOfficeHours = currentHour >= 9 && currentHour < 17;
 
   ROOMS.forEach(r => {
-    // 20% chance to change occupants every 10 seconds
-    if (Math.random() > 0.8) {
+    // 10% chance to change occupants every 10 seconds
+    if (Math.random() > 0.9) {
       const oldOccupants = globalRoomState[r].occupants;
       
       if (isOfficeHours) {
-        // Office Hours: High rush, 0 to 4 people randomly moving around
+        // Office Hours: 0 to 4 people
         globalRoomState[r].occupants = Math.floor(Math.random() * 5);
       } else {
-        // After Hours: Totally dead (mostly 0), rarely 1 person (night shift)
+        // After Hours: Mostly 0, rarely 1 person
         globalRoomState[r].occupants = Math.random() > 0.85 ? 1 : 0;
       }
       
@@ -92,35 +92,31 @@ setInterval(() => {
     const availableDevices = roomDevices.filter(d => now > (d.manualOverrideUntil || 0));
 
     if (globalRoomState[r].occupants === 0) {
-      // If room is empty, turn off devices, but people forget!
-      // 85% chance to leave devices on during day, 60% chance at night
-      const forgetChance = isOfficeHours ? 0.85 : 0.60; 
+      // ROOM IS EMPTY: Vampire Drain Logic
+      // 70% chance to be ON during office hours, 40% chance to be ON after hours.
+      const vampireChance = isOfficeHours ? 0.70 : 0.50;
       
       availableDevices.forEach(device => {
-        if (device.isOn) {
-          if (Math.random() > forgetChance) { 
-            device.isOn = false;
+        // 15% chance per tick to rethink its state, creating a slow, random "popcorn" effect
+        if (Math.random() > 0.85) {
+          const shouldBeOn = Math.random() < vampireChance;
+          if (device.isOn !== shouldBeOn) {
+            device.isOn = shouldBeOn;
             device.lastChanged = new Date().toISOString();
             stateChanged = true;
           }
         }
       });
     } else {
-      // If people are inside, devices turn on dynamically and randomly!
+      // ROOM IS OCCUPIED: Totally random, but high chance to be ON
+      const activeChance = 0.85; // 85% chance for any device to be ON when people are here
+      
       availableDevices.forEach(device => {
-        // High chance (80% day, 50% night) for a device to be ON
-        const turnOnChance = isOfficeHours ? 0.8 : 0.5;
-        
-        if (Math.random() < turnOnChance) {
-          if (!device.isOn) {
-            device.isOn = true;
-            device.lastChanged = new Date().toISOString();
-            stateChanged = true;
-          }
-        } else {
-          // Sometimes someone turns off 1 or 2 fans randomly (20% chance)
-          if (device.isOn && Math.random() < 0.2) { 
-            device.isOn = false;
+        // 20% chance per tick to rethink its state
+        if (Math.random() > 0.80) {
+          const shouldBeOn = Math.random() < activeChance;
+          if (device.isOn !== shouldBeOn) {
+            device.isOn = shouldBeOn;
             device.lastChanged = new Date().toISOString();
             stateChanged = true;
           }
@@ -148,7 +144,8 @@ setInterval(() => {
   const currentPower = getTotalPower();
 
   // 1. Power Spike Alert
-  if (currentPower > previousTotalPower * 1.8 && previousTotalPower > 0) {
+  // Requires both a 1.8x jump AND an absolute jump of at least 100W to prevent spam from a single fan turning on
+  if (currentPower > previousTotalPower * 1.8 && (currentPower - previousTotalPower) >= 100 && previousTotalPower > 0) {
     const msg = `⚠️ **Power Spike Detected:** Consumption jumped from ${previousTotalPower}W to ${currentPower}W!`;
     sendDiscordAlert(msg);
     io.emit('alert', msg);
@@ -320,23 +317,47 @@ client.on('messageCreate', async (message) => {
   }
 
   if (command === '!report') {
-    const activeRooms = ROOMS.filter(r => globalState.some(d => d.room === r && d.isOn));
-    const targetRoom = activeRooms.length > 0 ? activeRooms[0] : 'Work Room 2';
-    const watts = activeRooms.length > 0
-      ? globalState.filter(d => d.room === targetRoom && d.isOn).reduce((sum, d) => sum + d.powerDrawWhenOn, 0)
-      : 135;
+    const watts = getTotalPower();
+    const activeDevices = globalState.filter(d => d.isOn).map(d => `${d.name} in ${d.room}`).join(', ');
+    const occupiedRooms = ROOMS.filter(r => globalRoomState[r].occupants > 0).map(r => `${r} (${globalRoomState[r].occupants} people)`).join(', ');
+    
+    const systemPrompt = "You are OfficeIQ, an enterprise AI reporting agent. Generate a concise, professional 3-sentence incident report about the current office energy usage. If there is high usage or devices are left on in empty rooms, identify it as a waste incident. Use a formal tone.";
+    const userPrompt = `${systemPrompt}\n\nContext: Current total power is ${watts}W. Occupied rooms: ${occupiedRooms || 'None'}. Active devices: ${activeDevices || 'None'}. Provide the incident report.`;
 
-    const timeStr = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    message.reply(`⏳ Generating AI Incident Report...`).then(async (msg) => {
+      try {
+        if (!process.env.DO_AI_ENDPOINT) {
+          msg.edit("❌ I am currently unavailable (No AI Endpoint configured).");
+          return;
+        }
 
-    message.reply(`⏳ Generating AI Incident Report...`).then(msg => {
-      setTimeout(() => {
+        const aiResponse = await fetch(process.env.DO_AI_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.DO_AI_API_KEY}`
+          },
+          body: JSON.stringify({
+            messages: [{ role: "user", content: userPrompt }]
+          })
+        });
+
+        if (!aiResponse.ok) throw new Error("API Error");
+        
+        const data = await aiResponse.json();
+        const text = data.choices && data.choices[0] && data.choices[0].message
+          ? data.choices[0].message.content
+          : "Report generation failed.";
+          
         const embed = new EmbedBuilder()
           .setTitle('✨ AI Incident Report')
           .setColor('#2563eb')
-          .setDescription(`At ${timeStr} ${targetRoom} continued consuming ${watts}W despite office closure. The active devices remained on for 2 hours and 17 minutes, resulting in an estimated energy waste of 0.31 kWh.`);
+          .setDescription(text);
 
         msg.edit({ content: '✅ Report Generated:', embeds: [embed] });
-      }, 1500);
+      } catch (err) {
+        msg.edit("❌ Report generation failed (AI Error).");
+      }
     });
   }
 
