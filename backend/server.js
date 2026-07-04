@@ -65,11 +65,22 @@ setInterval(() => {
   const now = Date.now();
   let stateChanged = false;
   
+  const currentHour = new Date().getHours();
+  const isOfficeHours = currentHour >= 9 && currentHour < 17;
+
   ROOMS.forEach(r => {
     // 20% chance to change occupants
     if (Math.random() > 0.8) {
       const oldOccupants = globalRoomState[r].occupants;
-      globalRoomState[r].occupants = Math.floor(Math.random() * 5);
+      
+      if (isOfficeHours) {
+        // Office Hours: 0 to 4 people randomly moving around
+        globalRoomState[r].occupants = Math.floor(Math.random() * 5);
+      } else {
+        // After Hours: Mostly empty (0), rarely 1 person (night shift)
+        globalRoomState[r].occupants = Math.random() > 0.8 ? 1 : 0;
+      }
+      
       if (oldOccupants !== globalRoomState[r].occupants) {
         stateChanged = true;
       }
@@ -79,14 +90,22 @@ setInterval(() => {
     const availableDevices = roomDevices.filter(d => now > (d.manualOverrideUntil || 0));
     
     if (globalRoomState[r].occupants === 0) {
-      // If 0 occupants, turn off everything (that isn't locked)
+      // If room is empty, we turn off devices. 
+      // But we intentionally leave some ON (Vampire Drain).
+      // During After Hours, we increase the chance to 60% so the dashboard looks highly active for the video demo.
+      const forgetChance = isOfficeHours ? 0.2 : 0.6; 
+      
       availableDevices.forEach(device => {
         if (device.isOn) {
-          device.isOn = false;
-          device.lastChanged = new Date().toISOString();
-          stateChanged = true;
-          const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          io.emit('audit_log', `${timeStr} - Simulator turned OFF ${device.name} in ${device.room} (Room Empty)`);
+          if (Math.random() > forgetChance) { 
+            device.isOn = false;
+            device.lastChanged = new Date().toISOString();
+            stateChanged = true;
+            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            io.emit('audit_log', `${timeStr} - Simulator turned OFF ${device.name} in ${device.room} (Auto-Off)`);
+          } else {
+             // Device gets left on, causing Vampire Drain!
+          }
         }
       });
     } else {
@@ -147,9 +166,10 @@ setInterval(() => {
     io.emit('alert', msg);
   }
   
-  // 2. Vampire Drain (Assuming current time is after hours for simulation)
+  // 2. Vampire Drain (The PDF explicitly states: "assume office hours are 9 AM–5 PM")
+  // So after hours is anything from 5 PM (17:00) to 8:59 AM (08:59).
   const hour = new Date().getHours();
-  if (hour >= 20 || hour <= 6) {
+  if (hour >= 17 || hour < 9) {
     // Only alert once every 10 minutes to prevent spam
     if (currentPower > 0 && Date.now() - lastVampireAlert > 600000) {
       const emptyRoomsWithPower = ROOMS.filter(r => globalRoomState[r].occupants === 0 && globalState.some(d => d.room === r && d.isOn));

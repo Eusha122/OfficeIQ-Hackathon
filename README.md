@@ -74,14 +74,16 @@ npm run dev
 ---
 
 ## Hardware Simulation
-While this is a software simulation, the architecture is designed to map directly to physical hardware. We have designed a complete ESP32 schematic and PCB layout for a representative room (2 Fans, 3 Lights).
+While this is a software simulation, the backend logic maps directly to a physical hardware prototype built and simulated in Tinkercad. 
 
 ### Electrical Schematic
-*(The ESP32 uses internal INPUT_PULLUP resistors to read the states, mapped to GPIO 12, 13, 14, 26, 27).*
+The prototype uses an **Arduino Uno** to control a representative smart room:
+*   **3x LEDs** (representing smart lights)
+*   **2x DC Motors** (representing smart ceiling fans)
+*   **1x Ultrasonic Distance Sensor (HC-SR04)** (Acting as a doorway break-beam to accurately count occupants)
+*   **1x I2C LCD Display (16x2)** (Live physical dashboard showing the current occupant count)
 
-![Circuit Schematic](hardware/schematic.png)
+When a person breaks the ultrasonic beam, the Arduino increments the room count and instantly updates the physical LCD screen. As long as the count is >0, the lights and fans are powered on. When the count reaches 0, the system shuts down, perfectly mimicking the Node.js backend simulator.
 
-### PCB Layout Routing
-*(Custom PCB routing demonstrating the physical viability of the monitor node).*
-
-![PCB Layout](hardware/pcb_layout.png)
+📄 **[View the Full Hardware Schematic (PDF)](hardware/hardware%20schematic.pdf)**
+💻 **[View the Arduino Source Code](hardware/office_iq_node.ino)**

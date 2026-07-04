@@ -33,6 +33,16 @@ function App() {
   const [roomHistory, setRoomHistory] = useState({});
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [generatedReport, setGeneratedReport] = useState(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const currentHour = currentTime.getHours();
+  const isOfficeHours = currentHour >= 9 && currentHour < 17;
+
   const [kpiHistory, setKpiHistory] = useState({
      power: Array(10).fill({val: 0}),
      cost: Array(10).fill({val: 0}),
@@ -243,13 +253,24 @@ function App() {
         <header className="h-[72px] border-b border-white/60 bg-white/40 backdrop-blur-xl flex items-center justify-between px-4 lg:px-8 shrink-0 z-30">
           <div className="flex flex-col">
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">{activeTab}</h1>
-            <p className="text-sm text-slate-500 font-medium">
+            <p className="text-sm text-slate-500 font-medium hidden sm:block">
               {activeTab === 'Overview' && 'Real-time energy monitoring across all rooms'}
               {activeTab === 'Rooms' && 'Manage and monitor individual room environments'}
               {activeTab === 'Analytics' && 'Detailed power consumption and efficiency metrics'}
               {activeTab === 'Alerts' && 'System security and anomaly detection logs'}
               {activeTab === 'Settings' && 'Manage system configuration and preferences'}
             </p>
+          </div>
+          
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex flex-col items-end">
+              <span className="text-sm font-bold text-slate-800">{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <span className="text-[11px] font-semibold text-slate-500 hidden sm:block">{currentTime.toLocaleDateString()}</span>
+            </div>
+            <div className={`px-3 py-1.5 rounded-full border text-[11px] font-bold tracking-wide shadow-sm flex items-center gap-1.5 ${isOfficeHours ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'}`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${isOfficeHours ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`}></div>
+              {isOfficeHours ? 'OFFICE HOURS' : 'AFTER HOURS'}
+            </div>
           </div>
         </header>
 
@@ -290,9 +311,8 @@ function App() {
                 <div className="xl:w-[70%] bg-transparent p-4 lg:p-6 flex flex-col h-[300px] lg:h-full">
                   <div className="flex justify-between items-center mb-6 shrink-0">
                     <h2 className="text-base font-bold text-slate-900">Power Trend (Live)</h2>
-                    <div className="bg-white/50 border border-white/60 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-white/80 shadow-sm transition-colors">
+                    <div className="bg-white/50 border border-slate-200 text-slate-500 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg shadow-sm">
                       Last 30 Minutes
-                      <ChevronDown size={14} />
                     </div>
                   </div>
                   <div className="flex-1 min-h-0 w-full ml-[-20px]">
@@ -538,7 +558,9 @@ function App() {
               <div className="bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-4 lg:p-6 h-[350px] lg:h-[500px] flex flex-col">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-[15px] font-bold text-slate-900">Detailed Power Analytics</h2>
-                  <div className="bg-white/50 border border-white/60 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm">Last 24 Hours</div>
+                  <div className="bg-white/50 border border-slate-200 text-slate-500 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg shadow-sm">
+                    Last 24 Hours
+                  </div>
                 </div>
                 <div className="flex-1 w-full ml-[-20px]">
                   <ResponsiveContainer width="100%" height="100%">
