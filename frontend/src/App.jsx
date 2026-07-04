@@ -20,7 +20,8 @@ import {
   Loader2
 } from 'lucide-react';
 
-const socket = io('http://localhost:3001');
+const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
+const socket = io(API_BASE || undefined);
 
 function App() {
   const [devices, setDevices] = useState([]);
@@ -58,7 +59,7 @@ function App() {
   ];
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/state')
+    fetch(`${API_BASE}/api/state`)
       .then(res => res.json())
       .then(data => {
         setDevices(data.devices);
@@ -129,7 +130,7 @@ function App() {
     setLoadingDevices(prev => [...prev, id]);
 
     try {
-      const response = await fetch(`http://localhost:3001/api/devices/${id}`, {
+      const response = await fetch(`${API_BASE}/api/devices/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isOn: desiredState })
