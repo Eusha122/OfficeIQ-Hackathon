@@ -77,11 +77,15 @@ npm run dev
 While this is a software simulation, the backend logic maps directly to a physical hardware prototype built and simulated in Tinkercad. 
 
 ### Electrical Schematic
+
+![Hardware Schematic](hardware/image.png)
+
 The prototype uses an **Arduino Uno** to control a representative smart room:
 *   **3x LEDs** (representing smart lights)
 *   **2x DC Motors** (representing smart ceiling fans)
 *   **1x Ultrasonic Distance Sensor (HC-SR04)** (Acting as a doorway break-beam to accurately count occupants)
 *   **1x I2C LCD Display (16x2)** (Live physical dashboard showing the current occupant count)
+*   **1x Piezo Buzzer** (Audible 'door chime' confirming occupant entry)
 
 When a person breaks the ultrasonic beam, the Arduino increments the room count and instantly updates the physical LCD screen. As long as the count is >0, the lights and fans are powered on. When the count reaches 0, the system shuts down, perfectly mimicking the Node.js backend simulator.
 

@@ -10,15 +10,14 @@ int trigPin =2;;
 
 int echoPin = 3;
 
-int led1 = 12;
-
-int led2 = 11;
-
-int led3 = 10;
+int led1 = 13;
+int led2 = 12;
+int led3 = 11;
 
 
-int fan1 = 9;
-int fan2 = 8;
+int fan1 = 10;
+int fan2 = 9;
+int buzzerPin = 4;
 int occupants =0 ;
 bool isBeamBroken =false ;
 
@@ -36,6 +35,7 @@ void setup(){
 
   pinMode(fan1, OUTPUT);
   pinMode(fan2, OUTPUT);
+  pinMode(buzzerPin, OUTPUT);
   
   lcd.begin(16, 2) ;;
   lcd.setBacklight(1);
@@ -68,6 +68,14 @@ void loop(){
     if (!isBeamBroken) {
       occupants++;
       isBeamBroken = true;
+      
+      tone(buzzerPin, 2000, 100); 
+
+
+      delay(150);
+
+      tone(buzzerPin, 1500, 150);
+      
       
       lcd.clear();
       lcd.setCursor(0, 0);
