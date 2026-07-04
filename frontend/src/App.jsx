@@ -66,6 +66,7 @@ function App() {
         setTotalPower(data.totalPower);
         if (data.history) setHistory(data.history);
         if (data.roomState) setRoomState(data.roomState);
+        if (data.alerts) setAlerts(data.alerts);
 
         // Generate pseudo-history for rooms so charts aren't empty on load
         const initialRoomHist = {};

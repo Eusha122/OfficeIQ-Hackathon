@@ -32,6 +32,12 @@ let globalRoomState = {
   'Work Room 1': { occupants: 0 },
   'Work Room 2': { occupants: 0 }
 };
+let globalAlerts = [];
+
+function addGlobalAlert(msg) {
+  globalAlerts.unshift({ id: Date.now() + Math.random(), msg, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+  if (globalAlerts.length > 50) globalAlerts.pop();
+}
 
 // Initialize State
 ROOMS.forEach(room => {
@@ -148,6 +154,7 @@ setInterval(() => {
   if (currentPower > previousTotalPower * 1.8 && (currentPower - previousTotalPower) >= 100 && previousTotalPower > 0) {
     const msg = `⚠️ **Power Spike Detected:** Consumption jumped from ${previousTotalPower}W to ${currentPower}W!`;
     sendDiscordAlert(msg);
+    addGlobalAlert(msg);
     io.emit('alert', msg);
   }
 
@@ -169,6 +176,7 @@ setInterval(() => {
       }
 
       sendDiscordAlert(msg);
+      addGlobalAlert(msg);
       io.emit('alert', msg);
       lastVampireAlert = Date.now();
     }
@@ -179,7 +187,7 @@ setInterval(() => {
 
 // --- EXPRESS API (Fallback if not using websockets) ---
 app.get('/api/state', (req, res) => {
-  res.json({ devices: globalState, totalPower: getTotalPower(), history: powerHistory, roomState: globalRoomState });
+  res.json({ devices: globalState, totalPower: getTotalPower(), history: powerHistory, roomState: globalRoomState, alerts: globalAlerts });
 });
 
 // Enterprise API for toggling devices
@@ -192,7 +200,9 @@ app.patch('/api/devices/:id', (req, res) => {
 
     // Audit Log
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    io.emit('audit_log', `${timeStr} - Admin turned ${device.isOn ? 'ON' : 'OFF'} ${device.name} in ${device.room}`);
+    const auditMsg = `${timeStr} - Admin turned ${device.isOn ? 'ON' : 'OFF'} ${device.name} in ${device.room}`;
+    addGlobalAlert(auditMsg);
+    io.emit('audit_log', auditMsg);
 
     // Force immediate graph update
     updatePowerHistory();
@@ -249,7 +259,9 @@ client.on('messageCreate', async (message) => {
       device.manualOverrideUntil = Date.now() + 30000;
 
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      io.emit('audit_log', `${timeStr} - Discord Bot turned ${device.isOn ? 'ON' : 'OFF'} ${device.name} in ${device.room}`);
+      const auditMsg = `${timeStr} - Discord Bot turned ${device.isOn ? 'ON' : 'OFF'} ${device.name} in ${device.room}`;
+      addGlobalAlert(auditMsg);
+      io.emit('audit_log', auditMsg);
 
       updatePowerHistory();
       io.emit('state_update', { devices: globalState, totalPower: getTotalPower(), roomState: globalRoomState });
