@@ -78,6 +78,7 @@ While this is a software simulation, the backend logic maps directly to a physic
 
 ### Electrical Schematic
 
+![Working Hardware Setup](hardware/image%20copy.png)
 ![Hardware Schematic](hardware/image.png)
 
 The prototype uses an **Arduino Uno** to control a representative smart room:
