@@ -28,9 +28,9 @@ const DEVICE_TYPES = [
 let globalState = [];
 let powerHistory = []; // Stores last 30 minutes of power data [{ time, watts }]
 let globalRoomState = {
-  'Drawing Room': { occupants: 0 },
-  'Work Room 1': { occupants: 0 },
-  'Work Room 2': { occupants: 0 }
+  'Drawing Room': { occupants: 0, alertSentForThisCycle: false },
+  'Work Room 1': { occupants: 0, alertSentForThisCycle: false },
+  'Work Room 2': { occupants: 0, alertSentForThisCycle: false }
 };
 let globalAlerts = [];
 
@@ -182,6 +182,28 @@ setInterval(() => {
     }
   }
 
+  // 3. Continuous Runtime Alert (All devices in a room ON for a long time)
+  // For the hackathon demo, we scale "2 hours" down to "2 minutes" (120000ms) so judges can see it live.
+  ROOMS.forEach(r => {
+    const roomDevices = globalState.filter(d => d.room === r);
+    const allOn = roomDevices.length > 0 && roomDevices.every(d => d.isOn);
+    
+    if (allOn) {
+      const allOnSince = Math.max(...roomDevices.map(d => new Date(d.lastChanged).getTime()));
+      if (Date.now() - allOnSince > 120000) {
+        if (!globalRoomState[r].alertSentForThisCycle) {
+          const msg = `🚨 **Energy Waste:** All devices in **${r}** have been running continuously for a long time!`;
+          sendDiscordAlert(msg);
+          addGlobalAlert(msg);
+          io.emit('alert', msg);
+          globalRoomState[r].alertSentForThisCycle = true;
+        }
+      }
+    } else {
+      globalRoomState[r].alertSentForThisCycle = false;
+    }
+  });
+
   previousTotalPower = currentPower;
 }, 30000); // Check alerts every 30s
 
@@ -216,7 +238,7 @@ app.patch('/api/devices/:id', (req, res) => {
 // --- DISCORD BOT ---
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 
-client.on('ready', () => {
+client.on('clientReady', () => {
   console.log(`Discord Bot logged in as ${client.user.tag}`);
 });
 
@@ -238,7 +260,8 @@ client.on('messageCreate', async (message) => {
         { name: '`!toggle <device>`', value: 'Turns a specific device ON/OFF (e.g. `!toggle Drawing Room Fan 1`).' },
         { name: '`!usage`', value: 'Shows total current power usage and estimated cost rate.' },
         { name: '`!report`', value: 'Generates an AI incident report for any after-hours energy waste.' },
-        { name: '`!boss`', value: 'Asks the AI facilities manager for a sarcastic analysis of current usage.' }
+        { name: '`!boss`', value: 'Asks the AI facilities manager for a sarcastic analysis of current usage.' },
+        { name: '`!test2hour`', value: 'Immediately forces a fake "all devices left on for 2 hours" alert to the dashboard for testing.' }
       )
       .setFooter({ text: 'OfficeIQ Smart System' });
 
@@ -246,12 +269,17 @@ client.on('messageCreate', async (message) => {
   }
 
   if (command === '!toggle') {
+    if (args.length < 2) {
+      message.reply(`❌ Please specify a device. Try \`!toggle drawing fan 1\``);
+      return;
+    }
     const deviceQuery = args.slice(1).join(' ').toLowerCase();
+    const queryWords = deviceQuery.split(' ');
 
-    // Loosely match device by removing hyphens from the ID
-    const device = globalState.find(d =>
-      d.id.replace(/-/g, ' ').toLowerCase() === deviceQuery
-    );
+    const device = globalState.find(d => {
+      const idLower = d.id.toLowerCase();
+      return queryWords.every(word => idLower.includes(word));
+    });
 
     if (device) {
       device.isOn = !device.isOn;
@@ -272,6 +300,13 @@ client.on('messageCreate', async (message) => {
     }
   }
 
+  if (command === '!test2hour') {
+    const msg = `🚨 **[TEST] Energy Waste:** All devices in **Drawing Room** have been running continuously for more than 2 hours!`;
+    addGlobalAlert(msg);
+    io.emit('alert', msg);
+    message.reply(`✅ Triggered test alert! Check the dashboard alerts panel.`);
+  }
+
   if (command === '!status') {
     let responseText = '';
     ROOMS.forEach(room => {
@@ -280,11 +315,23 @@ client.on('messageCreate', async (message) => {
       const lights = roomDevices.filter(d => d.type === 'Light');
       const onFans = fans.filter(d => d.isOn).length;
       const onLights = lights.filter(d => d.isOn).length;
+      const fanPower = fans.reduce((sum, d) => d.isOn ? sum + d.powerDrawWhenOn : sum, 0);
+      const lightPower = lights.reduce((sum, d) => d.isOn ? sum + d.powerDrawWhenOn : sum, 0);
 
       responseText += `**${room}**\n`;
       responseText += ` └ 👥 People in Room: ${globalRoomState[room].occupants}\n`;
-      responseText += ` └ 🌬️ Fans: ${onFans}/${fans.length} ON\n`;
-      responseText += ` └ 💡 Lights: ${onLights}/${lights.length} ON\n\n`;
+      responseText += ` └ 🌬️ Fans: ${onFans}/${fans.length} ON (${fanPower}W)\n`;
+      responseText += ` └ 💡 Lights: ${onLights}/${lights.length} ON (${lightPower}W)\n`;
+      
+      const allOn = roomDevices.length > 0 && roomDevices.every(d => d.isOn);
+      if (allOn) {
+        const allOnSince = Math.max(...roomDevices.map(d => new Date(d.lastChanged).getTime()));
+        const diffMs = Date.now() - allOnSince;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffSecs = Math.floor((diffMs % 60000) / 1000);
+        responseText += ` └ ⏱️ All ON for: ${diffMins}m ${diffSecs}s\n`;
+      }
+      responseText += `\n`;
     });
 
     const embed = new EmbedBuilder()
@@ -303,7 +350,11 @@ client.on('messageCreate', async (message) => {
       return;
     }
 
-    const matchedRoom = ROOMS.find(r => r.toLowerCase().includes(roomQuery) || r.replace(/ /g, '').toLowerCase().includes(roomQuery));
+    const queryWords = roomQuery.toLowerCase().split(' ');
+    const matchedRoom = ROOMS.find(r => {
+      const roomLower = r.toLowerCase();
+      return queryWords.every(word => roomLower.includes(word));
+    });
 
     if (matchedRoom) {
       const roomDevices = globalState.filter(d => d.room === matchedRoom);
@@ -316,11 +367,30 @@ client.on('messageCreate', async (message) => {
       let responseText = `**${matchedRoom}**\n`;
       responseText += ` └ 👥 People in Room: ${globalRoomState[matchedRoom].occupants}\n`;
       responseText += ` └ ⚡ Current Power: ${roomPower}W\n`;
+      
+      const allOn = roomDevices.length > 0 && roomDevices.every(d => d.isOn);
+      if (allOn) {
+        const allOnSince = Math.max(...roomDevices.map(d => new Date(d.lastChanged).getTime()));
+        const diffMs = Date.now() - allOnSince;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffSecs = Math.floor((diffMs % 60000) / 1000);
+        responseText += ` └ ⏱️ ⚠️ All ON for: ${diffMins}m ${diffSecs}s\n`;
+      }
+      
       responseText += ` └ 🌬️ Fans: ${onFans}/${fans.length} ON\n`;
       responseText += ` └ 💡 Lights: ${onLights}/${lights.length} ON\n\n`;
       responseText += `**Devices:**\n`;
       roomDevices.forEach(d => {
-        responseText += ` └ ${d.name}: ${d.isOn ? '🟢 ON' : '⚫ OFF'}\n`;
+        let stateStr = d.isOn ? '🟢 ON ' : '⚫ OFF';
+        
+        if (d.isOn && d.lastChanged) {
+          const diffMs = Date.now() - new Date(d.lastChanged).getTime();
+          const diffMins = Math.floor(diffMs / 60000);
+          const diffSecs = Math.floor((diffMs % 60000) / 1000);
+          stateStr += ` (running for ${diffMins}m ${diffSecs}s)`;
+        }
+        
+        responseText += ` └ ${d.name}: ${stateStr}\n`;
       });
 
       const embed = new EmbedBuilder()
@@ -399,42 +469,42 @@ client.on('messageCreate', async (message) => {
     const systemPrompt = "You are OfficeIQ, a highly intelligent, humanized, and friendly AI assistant managing an office building. The boss hates robotic data dumps, so always provide conversational, helpful, and natural answers based EXACTLY on the real-time context provided. Keep your answers under 3 sentences.";
     const userPrompt = `${systemPrompt}\n\nContext: ${context}\n\nBoss asks: ${question || "How is the office looking right now?"}`;
 
-    message.channel.send('🤔 Thinking...');
+    message.reply('🤔 Thinking...').then(async (msg) => {
+      try {
+        if (!process.env.DO_AI_ENDPOINT) {
+          msg.edit("❌ I am currently unavailable (No AI Endpoint configured).");
+          return;
+        }
 
-    try {
-      if (!process.env.DO_AI_ENDPOINT) {
-        message.reply("I am currently unavailable (No AI Endpoint configured).");
-        return;
+        // Call DigitalOcean AI Agent endpoint (OpenAI compatible format)
+        const aiResponse = await fetch(process.env.DO_AI_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.DO_AI_API_KEY}`
+          },
+          body: JSON.stringify({
+            messages: [
+              { role: "user", content: userPrompt }
+            ]
+          })
+        });
+
+        if (!aiResponse.ok) {
+          throw new Error(`HTTP error! status: ${aiResponse.status}`);
+        }
+
+        const data = await aiResponse.json();
+        const text = data.choices && data.choices[0] && data.choices[0].message
+          ? data.choices[0].message.content
+          : "I'm a bit speechless right now.";
+
+        msg.edit(`🤖 **OfficeIQ AI:**\n${text}`);
+      } catch (err) {
+        console.error("AI Fetch Error:", err);
+        msg.edit("❌ I am currently unavailable (AI Endpoint Error).");
       }
-
-      // Call DigitalOcean AI Agent endpoint (OpenAI compatible format)
-      const aiResponse = await fetch(process.env.DO_AI_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.DO_AI_API_KEY}`
-        },
-        body: JSON.stringify({
-          messages: [
-            { role: "user", content: userPrompt }
-          ]
-        })
-      });
-
-      if (!aiResponse.ok) {
-        throw new Error(`HTTP error! status: ${aiResponse.status}`);
-      }
-
-      const data = await aiResponse.json();
-      const text = data.choices && data.choices[0] && data.choices[0].message
-        ? data.choices[0].message.content
-        : "I'm a bit speechless right now.";
-
-      message.reply(`🤖 **OfficeIQ AI:**\n${text}`);
-    } catch (err) {
-      console.error("AI Fetch Error:", err);
-      message.reply("I am currently unavailable (AI Endpoint Error).");
-    }
+    });
   }
 });
 

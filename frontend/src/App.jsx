@@ -312,10 +312,9 @@ function App() {
                 <div className="xl:w-[70%] bg-transparent p-4 lg:p-6 flex flex-col h-[300px] lg:h-full">
                   <div className="flex justify-between items-center mb-6 shrink-0">
                     <h2 className="text-base font-bold text-slate-900">Power Trend (Live)</h2>
-                    <div className="bg-white/50 border border-white/60 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-white/80 shadow-sm transition-colors">
+                    <span className="text-slate-500 text-xs font-semibold">
                       Last 30 Minutes
-                      <ChevronDown size={14} />
-                    </div>
+                    </span>
                   </div>
                   <div className="flex-1 min-h-0 w-full ml-[-20px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -386,6 +385,8 @@ function App() {
                     const roomDevices = rooms[roomName];
                     const activeCount = roomDevices.filter(d => d.isOn).length;
                     const roomWatts = roomDevices.reduce((sum, d) => d.isOn ? sum + d.powerDrawWhenOn : sum, 0);
+                    const fanWatts = roomDevices.reduce((sum, d) => (d.isOn && d.type === 'Fan') ? sum + d.powerDrawWhenOn : sum, 0);
+                    const lightWatts = roomDevices.reduce((sum, d) => (d.isOn && d.type === 'Light') ? sum + d.powerDrawWhenOn : sum, 0);
                     const efficiency = calculateEfficiency(roomDevices);
 
                     return (
@@ -405,9 +406,12 @@ function App() {
 
                         <div className="flex justify-between items-end">
                           <div className="flex gap-8">
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-0.5">
                               <span className="text-2xl font-bold text-slate-900 tracking-tight leading-none">{roomWatts}W</span>
-                              <span className="text-[11px] text-slate-500 font-semibold">Current Usage</span>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="text-[9px] text-slate-500 font-bold flex items-center gap-0.5 bg-slate-100/80 px-1.5 py-0.5 rounded"><Fan size={10} className="text-emerald-500" /> {fanWatts}W</span>
+                                <span className="text-[9px] text-slate-500 font-bold flex items-center gap-0.5 bg-slate-100/80 px-1.5 py-0.5 rounded"><Lightbulb size={10} className="text-amber-500" /> {lightWatts}W</span>
+                              </div>
                             </div>
                             <div className="flex flex-col gap-1">
                               <span className="text-2xl font-bold text-slate-900 tracking-tight leading-none">{efficiency}%</span>
@@ -445,6 +449,8 @@ function App() {
                 const roomDevices = rooms[roomName];
                 const activeCount = roomDevices.filter(d => d.isOn).length;
                 const roomWatts = roomDevices.reduce((sum, d) => d.isOn ? sum + d.powerDrawWhenOn : sum, 0);
+                const fanWatts = roomDevices.reduce((sum, d) => (d.isOn && d.type === 'Fan') ? sum + d.powerDrawWhenOn : sum, 0);
+                const lightWatts = roomDevices.reduce((sum, d) => (d.isOn && d.type === 'Light') ? sum + d.powerDrawWhenOn : sum, 0);
                 const efficiency = calculateEfficiency(roomDevices);
 
                 return (
@@ -466,9 +472,12 @@ function App() {
                     </div>
 
                     <div className="flex gap-8 mb-6 shrink-0">
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-0.5">
                         <span className="text-2xl font-bold text-slate-900 tracking-tight leading-none">{roomWatts}W</span>
-                        <span className="text-[11px] text-slate-500 font-semibold">Current Usage</span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] text-slate-500 font-bold flex items-center gap-1 bg-slate-100/80 px-1.5 py-0.5 rounded"><Fan size={10} className="text-emerald-500" /> {fanWatts}W</span>
+                          <span className="text-[10px] text-slate-500 font-bold flex items-center gap-1 bg-slate-100/80 px-1.5 py-0.5 rounded"><Lightbulb size={10} className="text-amber-500" /> {lightWatts}W</span>
+                        </div>
                       </div>
                       <div className="flex flex-col gap-1">
                         <span className="text-2xl font-bold text-slate-900 tracking-tight leading-none">{efficiency}%</span>
