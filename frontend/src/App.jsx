@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { 
-  Home, 
-  LayoutDashboard, 
-  BarChart3, 
-  Bell, 
-  Settings, 
-  Zap, 
-  CreditCard, 
-  Target, 
-  Monitor, 
+import {
+  Home,
+  LayoutDashboard,
+  BarChart3,
+  Bell,
+  Settings,
+  Zap,
+  CreditCard,
+  Target,
+  Monitor,
   ChevronRight,
   ChevronDown,
   Fan,
@@ -45,10 +45,10 @@ function App() {
   const isOfficeHours = currentHour >= 9 && currentHour < 17;
 
   const [kpiHistory, setKpiHistory] = useState({
-     power: Array(10).fill({val: 0}),
-     cost: Array(10).fill({val: 0}),
-     eff: Array(10).fill({val: 100}),
-     dev: Array(10).fill({val: 0})
+    power: Array(10).fill({ val: 0 }),
+    cost: Array(10).fill({ val: 0 }),
+    eff: Array(10).fill({ val: 100 }),
+    dev: Array(10).fill({ val: 0 })
   });
 
   const tabs = [
@@ -66,13 +66,13 @@ function App() {
         setTotalPower(data.totalPower);
         if (data.history) setHistory(data.history);
         if (data.roomState) setRoomState(data.roomState);
-        
+
         // Generate pseudo-history for rooms so charts aren't empty on load
         const initialRoomHist = {};
         const roomsList = [...new Set(data.devices.map(d => d.room))];
         roomsList.forEach(roomName => {
           const roomWatts = data.devices.filter(d => d.room === roomName).reduce((sum, d) => d.isOn ? sum + d.powerDrawWhenOn : sum, 0);
-          initialRoomHist[roomName] = Array.from({length: 15}).map(() => ({ watts: Math.max(0, roomWatts + (Math.random() * 10 - 5)) }));
+          initialRoomHist[roomName] = Array.from({ length: 15 }).map(() => ({ watts: Math.max(0, roomWatts + (Math.random() * 10 - 5)) }));
         });
         setRoomHistory(initialRoomHist);
       })
@@ -82,12 +82,12 @@ function App() {
       setDevices(data.devices);
       setTotalPower(data.totalPower);
       if (data.roomState) setRoomState(data.roomState);
-      
+
       setHistory(prev => {
-        const newHist = [...prev, { time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}), watts: data.totalPower }];
-        return newHist.slice(-30); 
+        const newHist = [...prev, { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), watts: data.totalPower }];
+        return newHist.slice(-30);
       });
-      
+
       setRoomHistory(prev => {
         const newHist = { ...prev };
         const roomsList = [...new Set(data.devices.map(d => d.room))];
@@ -119,12 +119,12 @@ function App() {
     // 1. Optimistic Update (UI changes instantly)
     const originalDevices = [...devices];
     const originalPower = totalPower;
-    
+
     const deviceIndex = devices.findIndex(d => d.id === id);
     if (deviceIndex === -1) return;
-    
+
     const powerDelta = desiredState ? devices[deviceIndex].powerDrawWhenOn : -devices[deviceIndex].powerDrawWhenOn;
-    
+
     setDevices(prev => prev.map(d => d.id === id ? { ...d, isOn: desiredState } : d));
     setTotalPower(prev => prev + powerDelta);
     setLoadingDevices(prev => [...prev, id]);
@@ -135,7 +135,7 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isOn: desiredState })
       });
-      
+
       if (!response.ok) throw new Error('API Error');
     } catch (err) {
       // Rollback on error
@@ -151,14 +151,14 @@ function App() {
   const handleGenerateReport = () => {
     setIsGeneratingReport(true);
     setGeneratedReport(null);
-    
+
     const roomNamesList = Object.keys(rooms);
     const activeRooms = roomNamesList.filter(r => rooms[r].some(d => d.isOn));
     const targetRoom = activeRooms.length > 0 ? activeRooms[0] : 'Work Room 2';
     const watts = activeRooms.length > 0 ? rooms[targetRoom].reduce((sum, d) => d.isOn ? sum + d.powerDrawWhenOn : sum, 0) : 135;
-    
+
     const timeStr = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    
+
     setTimeout(() => {
       setGeneratedReport(`At ${timeStr} ${targetRoom} continued consuming ${watts}W despite office closure. The active devices remained on for 2 hours and 17 minutes, resulting in an estimated energy waste of 0.31 kWh.`);
       setIsGeneratingReport(false);
@@ -176,14 +176,14 @@ function App() {
     const hour = new Date().getHours();
     const isAfterHours = hour >= 20 || hour <= 6;
     const roomPower = roomDevices.reduce((sum, d) => d.isOn ? sum + d.powerDrawWhenOn : sum, 0);
-    
+
     if (isAfterHours && roomPower > 0) score -= 20;
     if (roomPower > 100) score -= 10;
     return Math.max(0, score);
   };
 
   const roomNames = Object.keys(rooms);
-  const overallEfficiency = roomNames.length > 0 
+  const overallEfficiency = roomNames.length > 0
     ? Math.round(roomNames.reduce((acc, r) => acc + calculateEfficiency(rooms[r]), 0) / roomNames.length)
     : 100;
 
@@ -191,10 +191,10 @@ function App() {
 
   useEffect(() => {
     setKpiHistory(prev => ({
-       power: [...prev.power, { val: totalPower }].slice(-10),
-       cost: [...prev.cost, { val: parseFloat(costToday) }].slice(-10),
-       eff: [...prev.eff, { val: overallEfficiency }].slice(-10),
-       dev: [...prev.dev, { val: devices.filter(d => d.isOn).length }].slice(-10)
+      power: [...prev.power, { val: totalPower }].slice(-10),
+      cost: [...prev.cost, { val: parseFloat(costToday) }].slice(-10),
+      eff: [...prev.eff, { val: overallEfficiency }].slice(-10),
+      dev: [...prev.dev, { val: devices.filter(d => d.isOn).length }].slice(-10)
     }));
   }, [totalPower, costToday, overallEfficiency, devices]);
 
@@ -210,7 +210,7 @@ function App() {
 
   return (
     <div className="h-screen w-full flex bg-[#F4F7F9] text-slate-800 font-sans selection:bg-blue-500/20 relative overflow-hidden">
-      
+
       {/* Background Refraction Blobs Removed for pure minimalism */}
 
       {/* Left Sidebar */}
@@ -231,11 +231,10 @@ function App() {
               <button
                 key={tab.name}
                 onClick={() => setActiveTab(tab.name)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm font-medium transition-all duration-150 ${
-                  isActive 
-                    ? 'bg-white/80 text-blue-600 shadow-sm border border-white/60' 
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm font-medium transition-all duration-150 ${isActive
+                    ? 'bg-white/80 text-blue-600 shadow-sm border border-white/60'
                     : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
-                }`}
+                  }`}
               >
                 {tab.icon}
                 {tab.name}
@@ -249,12 +248,12 @@ function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 min-w-0 flex flex-col h-full relative z-10">
-        
+
         {/* Top Header */}
         <header className="h-[72px] border-b border-white/60 bg-white/40 backdrop-blur-xl flex items-center justify-between px-4 lg:px-8 shrink-0 z-30">
           <div className="flex flex-col">
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">{activeTab}</h1>
-            <p className="text-sm text-slate-500 font-medium hidden sm:block">
+            <p className="text-sm text-slate-500 font-medium">
               {activeTab === 'Overview' && 'Real-time energy monitoring across all rooms'}
               {activeTab === 'Rooms' && 'Manage and monitor individual room environments'}
               {activeTab === 'Analytics' && 'Detailed power consumption and efficiency metrics'}
@@ -277,12 +276,12 @@ function App() {
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-8 pb-[120px] lg:pb-8 flex flex-col gap-6 lg:gap-8">
-          
+
           {activeTab === 'Overview' && (
             <>
               {/* KPI Cards Row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                {[ 
+                {[
                   { title: "Total Usage", value: `${totalPower}W`, sub: "Live Consumption", icon: <Zap size={16} />, valKey: 'power' },
                   { title: "Cost / Day", value: `৳${costToday}`, sub: "Estimated Cost", icon: <CreditCard size={16} />, valKey: 'cost' },
                   { title: "Efficiency", value: `${overallEfficiency}%`, sub: "Overall Efficiency", icon: <Target size={16} />, valKey: 'eff' },
@@ -307,13 +306,14 @@ function App() {
 
               {/* Main Content Grid: 70% Chart / 30% Alerts */}
               <div className="flex flex-col xl:flex-row gap-4 lg:h-[400px]">
-                
+
                 {/* Power Trend Chart */}
                 <div className="xl:w-[70%] bg-transparent p-4 lg:p-6 flex flex-col h-[300px] lg:h-full">
                   <div className="flex justify-between items-center mb-6 shrink-0">
                     <h2 className="text-base font-bold text-slate-900">Power Trend (Live)</h2>
-                    <div className="bg-white/50 border border-slate-200 text-slate-500 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg shadow-sm">
+                    <div className="bg-white/50 border border-white/60 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-white/80 shadow-sm transition-colors">
                       Last 30 Minutes
+                      <ChevronDown size={14} />
                     </div>
                   </div>
                   <div className="flex-1 min-h-0 w-full ml-[-20px]">
@@ -322,7 +322,7 @@ function App() {
                         <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="time" stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} dy={10} />
                         <YAxis stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} tickFormatter={(val) => `${val}W`} dx={-10} />
-                        <Tooltip 
+                        <Tooltip
                           contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(8px)', borderColor: 'rgba(255,255,255,0.6)', color: '#0f172a', fontSize: '12px', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' }}
                           itemStyle={{ color: '#2563eb', fontWeight: 600 }}
                           labelStyle={{ color: '#64748b', marginBottom: '4px', fontWeight: 500 }}
@@ -348,8 +348,8 @@ function App() {
                           const cleanMsg = a.msg.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu, '').trim();
                           const isCritical = cleanMsg.toLowerCase().includes('spike');
                           const isWarning = cleanMsg.toLowerCase().includes('vampire');
-                          
-                          let dotColor = 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]'; 
+
+                          let dotColor = 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]';
                           if (isCritical) dotColor = 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]';
                           if (isWarning) dotColor = 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]';
 
@@ -379,7 +379,7 @@ function App() {
                   <h2 className="text-base font-bold text-slate-900">Rooms</h2>
                   <span onClick={() => setActiveTab('Rooms')} className="text-blue-600 text-xs font-bold cursor-pointer hover:underline">View All Rooms</span>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   {roomNames.map(roomName => {
                     const roomDevices = rooms[roomName];
@@ -413,13 +413,13 @@ function App() {
                               <span className="text-[11px] text-slate-500 font-semibold">Efficiency</span>
                             </div>
                           </div>
-                          
+
                           <div className="w-16 h-8 opacity-80">
-                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={roomHistory[roomName] || []}>
-                                  <Line type="monotone" dataKey="watts" stroke="#10b981" strokeWidth={2} dot={false} isAnimationActive={false} />
-                                </LineChart>
-                              </ResponsiveContainer>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <LineChart data={roomHistory[roomName] || []}>
+                                <Line type="monotone" dataKey="watts" stroke="#10b981" strokeWidth={2} dot={false} isAnimationActive={false} />
+                              </LineChart>
+                            </ResponsiveContainer>
                           </div>
                         </div>
 
@@ -489,8 +489,8 @@ function App() {
                             </div>
                             <div className="flex items-center gap-3">
                               {loadingDevices.includes(dev.id) && <span className="text-[10px] font-bold text-blue-500 animate-pulse uppercase tracking-wide">Updating...</span>}
-                              <button 
-                                onClick={() => toggleDevice(dev.id, !dev.isOn)} 
+                              <button
+                                onClick={() => toggleDevice(dev.id, !dev.isOn)}
                                 disabled={loadingDevices.includes(dev.id)}
                                 className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 cursor-pointer ${dev.isOn ? 'bg-emerald-500' : 'bg-slate-300'}`}
                               >
@@ -511,25 +511,25 @@ function App() {
                       <div className="bg-slate-900/5 border border-slate-200/50 rounded-[12px] p-5 relative overflow-hidden h-[130px] flex items-center justify-center shadow-inner">
                         {/* Floor pattern overlay */}
                         <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:12px_12px]"></div>
-                        
+
                         <div className="w-full flex items-center justify-between px-2 gap-2">
-                        {roomDevices.map((dev, idx) => {
-                          const isFan = dev.type === 'Fan';
-                          const isOn = dev.isOn;
-                          const shortName = (isFan ? 'F' : 'L') + dev.name.replace(/[^0-9]/g, '');
-                          return (
-                            <div key={idx} className={`relative flex flex-col items-center justify-center gap-2 transition-all duration-300 z-10 ${isOn ? 'scale-110' : 'scale-100 opacity-60 hover:opacity-80'}`}>
-                              <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm border ${isOn ? (isFan ? 'bg-emerald-50 text-emerald-600 border-emerald-200/60 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'bg-amber-50 text-amber-500 border-amber-200/60 shadow-[0_0_15px_rgba(245,158,11,0.2)]') : 'bg-white text-slate-400 border-slate-200/60'}`}>
-                                {isFan ? (
-                                  <Fan size={22} className={isOn ? 'animate-[spin_1.5s_linear_infinite]' : ''} />
-                                ) : (
-                                  <Lightbulb size={22} className={isOn ? 'drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]' : ''} />
-                                )}
+                          {roomDevices.map((dev, idx) => {
+                            const isFan = dev.type === 'Fan';
+                            const isOn = dev.isOn;
+                            const shortName = (isFan ? 'F' : 'L') + dev.name.replace(/[^0-9]/g, '');
+                            return (
+                              <div key={idx} className={`relative flex flex-col items-center justify-center gap-2 transition-all duration-300 z-10 ${isOn ? 'scale-110' : 'scale-100 opacity-60 hover:opacity-80'}`}>
+                                <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm border ${isOn ? (isFan ? 'bg-emerald-50 text-emerald-600 border-emerald-200/60 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'bg-amber-50 text-amber-500 border-amber-200/60 shadow-[0_0_15px_rgba(245,158,11,0.2)]') : 'bg-white text-slate-400 border-slate-200/60'}`}>
+                                  {isFan ? (
+                                    <Fan size={22} className={isOn ? 'animate-[spin_1.5s_linear_infinite]' : ''} />
+                                  ) : (
+                                    <Lightbulb size={22} className={isOn ? 'drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]' : ''} />
+                                  )}
+                                </div>
+                                <span className="text-[10px] font-bold text-slate-500 tracking-widest">{shortName}</span>
                               </div>
-                              <span className="text-[10px] font-bold text-slate-500 tracking-widest">{shortName}</span>
-                            </div>
-                          )
-                        })}
+                            )
+                          })}
                         </div>
                       </div>
                     </div>
@@ -559,9 +559,7 @@ function App() {
               <div className="bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-4 lg:p-6 h-[350px] lg:h-[500px] flex flex-col">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-[15px] font-bold text-slate-900">Detailed Power Analytics</h2>
-                  <div className="bg-white/50 border border-slate-200 text-slate-500 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg shadow-sm">
-                    Last 24 Hours
-                  </div>
+                  <div className="bg-white/50 border border-white/60 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm">Last 24 Hours</div>
                 </div>
                 <div className="flex-1 w-full ml-[-20px]">
                   <ResponsiveContainer width="100%" height="100%">
@@ -582,8 +580,8 @@ function App() {
             <div className="bg-white/60 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[16px] p-6 flex flex-col h-full w-full">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-6 shrink-0">
                 <h2 className="text-[15px] font-bold text-slate-900">Security & System Alerts Log</h2>
-                <button 
-                  onClick={handleGenerateReport} 
+                <button
+                  onClick={handleGenerateReport}
                   disabled={isGeneratingReport}
                   className="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed shrink-0 whitespace-nowrap"
                 >
@@ -608,36 +606,36 @@ function App() {
                 </div>
               )}
 
-                <div className="flex-1 overflow-y-auto no-scrollbar">
-                  {alerts.length === 0 ? (
-                    <div className="text-sm font-semibold text-slate-400 py-12 text-center border border-dashed border-slate-300 rounded-[12px]">No alerts in the system log.</div>
-                  ) : (
-                    <div className="flex flex-col gap-4">
-                      {alerts.map(a => {
-                        const cleanMsg = a.msg.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu, '').trim();
-                        const isCritical = cleanMsg.toLowerCase().includes('spike');
-                        const isWarning = cleanMsg.toLowerCase().includes('vampire');
-                        let dotColor = 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]';
-                        if (isCritical) dotColor = 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]';
-                        if (isWarning) dotColor = 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]';
+              <div className="flex-1 overflow-y-auto no-scrollbar">
+                {alerts.length === 0 ? (
+                  <div className="text-sm font-semibold text-slate-400 py-12 text-center border border-dashed border-slate-300 rounded-[12px]">No alerts in the system log.</div>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {alerts.map(a => {
+                      const cleanMsg = a.msg.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu, '').trim();
+                      const isCritical = cleanMsg.toLowerCase().includes('spike');
+                      const isWarning = cleanMsg.toLowerCase().includes('vampire');
+                      let dotColor = 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]';
+                      if (isCritical) dotColor = 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]';
+                      if (isWarning) dotColor = 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]';
 
-                        return (
-                          <div key={a.id} className="flex items-start gap-4 p-4 border border-white/60 bg-white/40 shadow-sm rounded-[12px] hover:bg-white/70 transition-colors">
-                            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${dotColor}`}></div>
-                            <div className="flex flex-col gap-1 w-full">
-                              <div className="flex justify-between items-start">
-                                <span className="text-[14px] font-bold text-slate-800">{isCritical ? 'High Power Usage' : isWarning ? 'After-Hours Activity' : 'System Notice'}</span>
-                                <span className="text-[11px] font-semibold text-slate-500">{a.time}</span>
-                              </div>
-                              <span className="text-[13px] font-medium text-slate-600">{cleanMsg}</span>
+                      return (
+                        <div key={a.id} className="flex items-start gap-4 p-4 border border-white/60 bg-white/40 shadow-sm rounded-[12px] hover:bg-white/70 transition-colors">
+                          <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${dotColor}`}></div>
+                          <div className="flex flex-col gap-1 w-full">
+                            <div className="flex justify-between items-start">
+                              <span className="text-[14px] font-bold text-slate-800">{isCritical ? 'High Power Usage' : isWarning ? 'After-Hours Activity' : 'System Notice'}</span>
+                              <span className="text-[11px] font-semibold text-slate-500">{a.time}</span>
                             </div>
+                            <span className="text-[13px] font-medium text-slate-600">{cleanMsg}</span>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
+            </div>
           )}
 
 
@@ -652,9 +650,8 @@ function App() {
                 <button
                   key={tab.name}
                   onClick={() => setActiveTab(tab.name)}
-                  className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${
-                    isActive ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
-                  }`}
+                  className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${isActive ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
+                    }`}
                 >
                   <div className={`p-1.5 rounded-full ${isActive ? 'bg-blue-50' : 'bg-transparent'}`}>
                     {tab.icon}
