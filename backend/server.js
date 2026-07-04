@@ -2,7 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import { Client, GatewayIntentBits, EmbedBuilder } from 'discord.js';
+import { Client, GatewayIntentBits, EmbedBuilder, Events } from 'discord.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -238,7 +238,7 @@ app.patch('/api/devices/:id', (req, res) => {
 // --- DISCORD BOT ---
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 
-client.on('clientReady', () => {
+client.on(Events.ClientReady, () => {
   console.log(`Discord Bot logged in as ${client.user.tag}`);
 });
 
@@ -260,8 +260,7 @@ client.on('messageCreate', async (message) => {
         { name: '`!toggle <device>`', value: 'Turns a specific device ON/OFF (e.g. `!toggle Drawing Room Fan 1`).' },
         { name: '`!usage`', value: 'Shows total current power usage and estimated cost rate.' },
         { name: '`!report`', value: 'Generates an AI incident report for any after-hours energy waste.' },
-        { name: '`!boss`', value: 'Asks the AI facilities manager for a sarcastic analysis of current usage.' },
-        { name: '`!test2hour`', value: 'Immediately forces a fake "all devices left on for 2 hours" alert to the dashboard for testing.' }
+        { name: '`!boss`', value: 'Asks the AI facilities manager for a sarcastic analysis of current usage.' }
       )
       .setFooter({ text: 'OfficeIQ Smart System' });
 

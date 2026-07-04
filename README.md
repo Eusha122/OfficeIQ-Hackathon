@@ -31,9 +31,9 @@ To ensure zero latency and perfect synchronization, OfficeIQ uses a Single-Proce
 ## Key Features
 
 *   Live UI Reactivity: CSS animations for fans and lights that react instantly to backend events.
+*   Granular Power Tracking: Breaks down power consumption individually for fans vs lights in real-time.
 *   Power History Graph: Recharts integration showing a rolling 30-minute consumption trend.
-*   Intelligent Alert Engine: Automatically detects "Power Spikes" and "Vampire Drains" (after-hours usage), alerting both the UI and Discord.
-*   Proactive Smart Alerts: The backend dynamically checks for empty rooms with devices left on and pushes specific warnings.
+*   Intelligent Alert Engine: Automatically detects "Power Spikes", "Vampire Drains" (after-hours usage), and "Energy Waste" (devices left on for 2+ hours), alerting both the UI and Discord.
 *   Conversational AI Manager: The Discord bot uses a DigitalOcean MiniMax M2.5 AI agent to provide human-readable, contextual summaries of office energy usage based on real-time data.
 
 ---
@@ -75,9 +75,9 @@ npm run dev
 ## Discord Bot Commands
 
 *   `!help` - Displays the full list of available commands and descriptions.
-*   `!status` - Returns a beautifully formatted embed showing exactly what is ON/OFF in each room.
-*   `!room <name>` - Shows the detailed status of a specific room (e.g. `!room work 1`).
-*   `!toggle <device>` - Manually toggle any device directly from Discord (e.g. `!toggle Drawing Room Fan 1`).
+*   `!status` - Returns a beautifully formatted embed showing exactly what is ON/OFF in each room and tracks continuous runtime.
+*   `!room <name>` - Fuzzy-searches for a room (e.g. `!room work 1`) and shows detailed status including individual device runtimes.
+*   `!toggle <device>` - Fuzzy-searches and toggles any device directly from Discord (e.g. `!toggle drawing fan 1`).
 *   `!usage` - Shows current power draw (Watts) and estimated operational cost per hour.
 *   `!report` - Generates an AI incident report for any after-hours energy waste.
 *   `!boss <question>` - Ask the DigitalOcean AI Agent conversational questions about the live building state.
